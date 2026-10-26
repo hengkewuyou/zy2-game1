@@ -1,0 +1,1086 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0f1420">
+<meta name="description" content="执业药师《中药二》单味药章节归属记忆游戏 · 407 味药 · 44 个章节，自适应出题">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>中药二 · 单味药章节闯关</title>
+<style>
+  :root{
+    --bg:#0f1420; --panel:#171e2e; --panel2:#1e2739; --line:#2b3651;
+    --txt:#e8eefc; --dim:#8b9bb8; --acc:#4f8cff; --acc2:#2fd3a0;
+    --ok:#2fd3a0; --bad:#ff5d6c; --warn:#ffb648;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{
+    margin:0;background:radial-gradient(1200px 700px at 50% -10%,#1b2740 0%,var(--bg) 55%);
+    color:var(--txt);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+    display:flex;justify-content:center;align-items:flex-start;
+    padding:16px;padding-bottom:calc(16px + env(safe-area-inset-bottom));
+    -webkit-text-size-adjust:100%;
+  }
+  #app{width:100%;max-width:560px;min-width:0}
+
+  /* ---------- 窄屏适配 ---------- */
+  @media (max-width:430px){
+    body{padding:10px;padding-bottom:calc(10px + env(safe-area-inset-bottom))}
+    .drug{font-size:36px;letter-spacing:2px}
+    .drug.long{font-size:29px}
+    .opt{padding:12px 12px;font-size:14.5px}
+    .stats{gap:6px}
+    .stat{padding:8px 5px}
+    .stat b{font-size:15px}
+    .stat span{font-size:9.5px}
+    .card{padding:18px 14px 14px;border-radius:15px}
+    .io .btn{font-size:11.5px;padding:9px 2px}
+  }
+  @media (max-height:640px){
+    .drug{margin:2px 0}
+    .ask{margin-bottom:12px}
+  }
+
+  /* ---------- 顶栏 ---------- */
+  .topbar{display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap}
+  .title{font-size:15px;font-weight:700;letter-spacing:.5px;flex:1;min-width:140px}
+  .title small{display:block;font-weight:400;font-size:11px;color:var(--dim);letter-spacing:0}
+  .btn{
+    background:var(--panel2);border:1px solid var(--line);color:var(--txt);
+    padding:7px 13px;border-radius:9px;font-size:13px;cursor:pointer;transition:.15s;
+    font-family:inherit;
+  }
+  .btn:hover{background:#26314a;border-color:#3d4b6d}
+  .btn:active{transform:scale(.97)}
+  .btn.ghost{background:transparent}
+  .btn.on{background:var(--acc);border-color:var(--acc);color:#fff;font-weight:600}
+
+  /* ---------- 进度 ---------- */
+  .stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:14px}
+  .stat{background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:9px 8px;text-align:center;min-width:0;overflow:hidden}
+  .stat b{display:block;font-size:17px;line-height:1.25;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .stat span{font-size:10.5px;color:var(--dim)}
+  .stat.a b{color:var(--acc2)} .stat.b b{color:var(--warn)} .stat.c b{color:var(--bad)}
+
+  /* ---------- 进度条 ---------- */
+  .bar{height:5px;background:#232d43;border-radius:99px;overflow:hidden;margin-bottom:18px}
+  .bar>i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--acc),var(--acc2));transition:width .3s}
+
+  /* ---------- 题卡 ---------- */
+  .card{
+    background:linear-gradient(180deg,var(--panel),#141b2a);
+    border:1px solid var(--line);border-radius:18px;padding:22px 18px 18px;
+    box-shadow:0 18px 50px -28px #000;
+  }
+  .qmeta{display:flex;justify-content:space-between;font-size:11.5px;color:var(--dim);margin-bottom:14px}
+  .qmeta .tm{font-variant-numeric:tabular-nums}
+  .drug{
+    text-align:center;font-size:44px;font-weight:800;letter-spacing:3px;
+    margin:6px 0 4px;line-height:1.2;
+  }
+  .drug.long{font-size:34px;letter-spacing:2px}
+  .ask{text-align:center;color:var(--dim);font-size:12.5px;margin-bottom:20px}
+
+  /* ---------- 选项 ---------- */
+  .opts{display:flex;flex-direction:column;gap:9px}
+  .opt{
+    display:flex;align-items:center;gap:11px;
+    background:var(--panel2);border:1.5px solid var(--line);border-radius:12px;
+    padding:13px 14px;font-size:15px;cursor:pointer;transition:.13s;text-align:left;
+    color:var(--txt);font-family:inherit;width:100%;
+  }
+  .opt:hover:not(.lock){border-color:#46587f;background:#242f47}
+  .opt .k{
+    flex:0 0 24px;height:24px;border-radius:7px;background:#2c3855;
+    display:flex;align-items:center;justify-content:center;
+    font-size:12px;font-weight:700;color:#a9bade;
+  }
+  .opt .t{flex:1;line-height:1.3}
+  .opt .tag{font-size:10.5px;color:var(--dim);display:block;margin-top:2px}
+  .opt.lock{cursor:default}
+  .opt.ok{border-color:var(--ok);background:rgba(47,211,160,.13)}
+  .opt.ok .k{background:var(--ok);color:#06251c}
+  .opt.bad{border-color:var(--bad);background:rgba(255,93,108,.13)}
+  .opt.bad .k{background:var(--bad);color:#2b0004}
+  .opt.dim{opacity:.42}
+
+  /* ---------- 反馈 ---------- */
+  .fb{margin-top:15px;font-size:13px;line-height:1.65;display:none}
+  .fb.show{display:block;animation:fade .22s}
+  @keyframes fade{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+  .fb .h{font-weight:700;font-size:14.5px;margin-bottom:6px}
+  .fb .h.ok{color:var(--ok)} .fb .h.bad{color:var(--bad)}
+  .fb .row{color:var(--dim);margin-top:3px}
+  .fb .row b{color:var(--txt);font-weight:600}
+  .fb .eff{
+    margin-top:9px;padding:9px 11px;background:#131a29;border-left:2.5px solid var(--acc);
+    border-radius:0 8px 8px 0;color:#c6d3ee;font-size:12.5px
+  }
+  .fb .eff i{color:var(--dim);font-style:normal;font-size:11px}
+
+  /* 连击徽标 */
+  .combo{
+    display:inline-block;margin-left:8px;padding:2px 9px;border-radius:99px;
+    background:linear-gradient(90deg,#ffb648,#ff7a45);color:#2b1400;
+    font-size:11px;font-weight:800;letter-spacing:.5px;
+    animation:pop .3s cubic-bezier(.34,1.56,.64,1);
+  }
+  @keyframes pop{from{transform:scale(.6);opacity:0}to{transform:scale(1);opacity:1}}
+
+  /* 掌握度进度条 */
+  .wbar{display:flex;align-items:center;gap:8px;margin-top:11px}
+  .wtag{font-size:10.5px;color:var(--dim);flex:0 0 auto}
+  .wtrack{flex:1 1 auto;min-width:0;height:6px;background:#232d43;border-radius:99px;overflow:hidden}
+  .wtrack>i{display:block;height:100%;border-radius:99px;
+    background:linear-gradient(90deg,#4f8cff,#2fd3a0);transition:width .35s cubic-bezier(.2,.8,.2,1)}
+  .wtrack>i.hi{background:linear-gradient(90deg,#2fd3a0,#7bea5e)}
+  .wlab{flex:0 0 auto;font-size:10.5px;color:var(--dim);min-width:44px;text-align:right}
+  .wlab.hi{color:var(--ok);font-weight:700}
+
+  /* ---------- 下一题 ---------- */
+  .next{
+    margin-top:16px;width:100%;padding:13px;border-radius:12px;border:0;cursor:pointer;
+    background:linear-gradient(90deg,var(--acc),#6b6cff);color:#fff;font-size:15px;font-weight:700;
+    font-family:inherit;display:none;
+  }
+  .next.show{display:block;animation:fade .2s}
+  .next:active{transform:scale(.985)}
+
+  /* ---------- 结束 ---------- */
+  .done{text-align:center;padding:8px 4px}
+  .done h2{margin:6px 0 4px;font-size:24px}
+  .done .sub{color:var(--dim);font-size:13px;margin-bottom:22px}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;text-align:left}
+  .cell{background:var(--panel2);border:1px solid var(--line);border-radius:11px;padding:11px 13px}
+  .cell span{font-size:11px;color:var(--dim);display:block}
+  .cell b{font-size:19px;font-variant-numeric:tabular-nums}
+
+  .weak{text-align:left;margin-bottom:18px}
+  .weak h3{font-size:13px;color:var(--dim);font-weight:600;margin:0 0 9px}
+  .wrow{display:flex;align-items:center;gap:9px;margin-bottom:7px;font-size:13px}
+  .wrow .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .wrow .cnt{font-variant-numeric:tabular-nums;color:var(--warn);font-size:12px}
+
+  .empty{text-align:center;color:var(--dim);font-size:13px;padding:26px 0}
+  .kbd{background:#2c3855;border-radius:5px;padding:1px 6px;font-size:11.5px;color:#b9c8e8}
+  .io{display:flex;gap:8px;margin-top:14px}
+  .io .btn{flex:1 1 0;min-width:0;font-size:12.5px;padding:9px 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+  /* ---------- 命题权重面板 ---------- */
+  .sc{margin-top:14px;background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+  .sc>summary{
+    cursor:pointer;padding:11px 14px;font-size:12.5px;color:var(--dim);list-style:none;
+    display:flex;align-items:center;gap:6px;user-select:none;
+  }
+  .sc>summary::-webkit-details-marker{display:none}
+  .sc>summary:before{content:'▸';font-size:11px;transition:.2s;color:#5f6d8c}
+  .sc[open]>summary:before{transform:rotate(90deg)}
+  .sc>summary:hover{color:var(--txt)}
+  .scin{padding:2px 14px 10px}
+  .scrow{display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:11.5px}
+  .scn{flex:0 0 96px;color:#c6d3ee;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .scb{flex:1 1 auto;min-width:0;height:7px;background:#232d43;border-radius:99px;overflow:hidden}
+  .scb>i{display:block;height:100%;background:linear-gradient(90deg,#4f8cff,#2fd3a0);border-radius:99px}
+  .scv{flex:0 0 72px;text-align:right;color:var(--dim);font-variant-numeric:tabular-nums;font-size:10.5px}
+  .scnote{padding:0 14px 12px;font-size:10.5px;color:#556181;line-height:1.6}
+  .savehint{font-size:11px;color:#5f6d8c;margin-top:8px;text-align:center;line-height:1.6}
+  .toast{
+    position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(20px);
+    background:#2fd3a0;color:#06251c;font-size:13px;font-weight:600;
+    padding:10px 20px;border-radius:99px;opacity:0;pointer-events:none;transition:.25s;z-index:99;
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  footer{margin-top:18px;text-align:center;font-size:11px;color:#556181;line-height:1.7}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+const DRUGS=[
+{n:"麻黄",c:"第一章 解表药",s:"辛温解表药",e:"发汗散寒，宣肺平喘，利水消肿"},
+{n:"香薷",c:"第一章 解表药",s:"辛温解表药",e:"发汗解表，化湿和中，利水消肿"},
+{n:"桂枝",c:"第一章 解表药",s:"辛温解表药",e:"发汗解肌，温通经脉，助阳化气，平冲降气"},
+{n:"紫苏叶",c:"第一章 解表药",s:"辛温解表药",e:"解表散寒，行气和胃，解鱼蟹毒"},
+{n:"紫苏梗",c:"第一章 解表药",s:"辛温解表药",e:"理气宽中，止痛，安胎"},
+{n:"生姜",c:"第一章 解表药",s:"辛温解表药",e:"解表散寒，温中止呕，化痰止咳，解鱼蟹毒"},
+{n:"荆芥",c:"第一章 解表药",s:"辛温解表药",e:"解表散风，透疹（止痒），消疮"},
+{n:"防风",c:"第一章 解表药",s:"辛温解表药",e:"祛风解表，胜湿止痛，止痉"},
+{n:"羌活",c:"第一章 解表药",s:"辛温解表药",e:"解表散寒，祛风除湿，止痛"},
+{n:"藁本",c:"第一章 解表药",s:"辛温解表药",e:"祛风散寒，除湿止痛"},
+{n:"细辛",c:"第一章 解表药",s:"辛温解表药",e:"解表散寒，通窍，祛风止痛，温肺化饮"},
+{n:"白芷",c:"第一章 解表药",s:"辛温解表药",e:"解表风寒，祛风止痛，宣通鼻窍，燥湿止带，消肿排脓"},
+{n:"苍耳子",c:"第一章 解表药",s:"辛温解表药",e:"散风寒，通鼻窍，祛风湿"},
+{n:"辛夷",c:"第一章 解表药",s:"辛温解表药",e:"散风寒，通鼻窍"},
+{n:"西河柳",c:"第一章 解表药",s:"辛温解表药",e:"发表透疹，祛风除湿"},
+{n:"薄荷",c:"第一章 解表药",s:"辛凉解表药",e:"疏散风热，清利头目，利咽，透疹，疏肝行气"},
+{n:"蔓荆子",c:"第一章 解表药",s:"辛凉解表药",e:"疏散风热，清利头目"},
+{n:"牛蒡子",c:"第一章 解表药",s:"辛凉解表药",e:"疏散风热，宣肺，利咽，透疹，解毒"},
+{n:"蝉蜕",c:"第一章 解表药",s:"辛凉解表药",e:"疏散风热，利咽，透疹，明目退翳，解痉"},
+{n:"桑叶",c:"第一章 解表药",s:"辛凉解表药",e:"疏散风热，清肺润燥，清肝明目"},
+{n:"菊花",c:"第一章 解表药",s:"辛凉解表药",e:"散风清热，平抑肝阳，清肝明目，清热解毒"},
+{n:"葛根",c:"第一章 解表药",s:"辛凉解表药",e:"解肌退热，透疹，生津止渴，升阳止泻，通经活络，解酒毒"},
+{n:"柴胡",c:"第一章 解表药",s:"辛凉解表药",e:"疏散退热，疏肝解郁，升举阳气"},
+{n:"升麻",c:"第一章 解表药",s:"辛凉解表药",e:"发表透疹，清热解毒，升举阳气"},
+{n:"淡豆豉",c:"第一章 解表药",s:"辛凉解表药",e:"解表，除烦，宣发郁热"},
+{n:"浮萍",c:"第一章 解表药",s:"辛凉解表药",e:"透疹，利尿"},
+{n:"木贼",c:"第一章 解表药",s:"辛凉解表药",e:"疏散风热，明目退翳"},
+{n:"谷精草",c:"第一章 解表药",s:"辛凉解表药",e:"疏散风热，明目退翳"},
+{n:"石膏",c:"第二章 清热药",s:"清热泻火药",e:"生用：清热泻火， 除烦止渴，煅用：收湿敛疮， 生肌止血"},
+{n:"知母",c:"第二章 清热药",s:"清热泻火药",e:"清热泻火，滋阴润燥"},
+{n:"天花粉",c:"第二章 清热药",s:"清热泻火药",e:"清热泻火，生津止渴，消肿排脓"},
+{n:"栀子",c:"第二章 清热药",s:"清热泻火药",e:"泻火除烦，清热利湿，凉血解毒，（外用）消肿止痛"},
+{n:"芦根",c:"第二章 清热药",s:"清热泻火药",e:"清热泻火，生津止渴，除烦，止呕，利尿"},
+{n:"竹叶",c:"第二章 清热药",s:"清热泻火药",e:"清热泻火，除烦，生津，利尿"},
+{n:"淡竹叶",c:"第二章 清热药",s:"清热泻火药",e:"清热泻火，利尿通淋，除烦止渴"},
+{n:"夏枯草",c:"第二章 清热药",s:"清热泻火药",e:"清肝泻火，明目，散结消肿"},
+{n:"决明子",c:"第二章 清热药",s:"清热泻火药",e:"清热明目，润肠通便"},
+{n:"密蒙花",c:"第二章 清热药",s:"清热泻火药",e:"清热泻火，养肝明目，退翳"},
+{n:"青葙子",c:"第二章 清热药",s:"清热泻火药",e:"清肝泻火，明目退翳"},
+{n:"黄芩",c:"第二章 清热药",s:"清热燥湿药",e:"清热燥湿，泻火解毒，止血，安胎"},
+{n:"黄连",c:"第二章 清热药",s:"清热燥湿药",e:"清热燥湿，泻火，解毒"},
+{n:"黄柏",c:"第二章 清热药",s:"清热燥湿药",e:"清热燥湿，泻火解毒疗疮，除蒸"},
+{n:"龙胆",c:"第二章 清热药",s:"清热燥湿药",e:"清热燥湿，泻肝胆火"},
+{n:"苦参",c:"第二章 清热药",s:"清热燥湿药",e:"清热燥湿，杀虫，利尿"},
+{n:"白鲜皮",c:"第二章 清热药",s:"清热燥湿药",e:"清热燥湿，祛风解毒"},
+{n:"地黄",c:"第二章 清热药",s:"清热凉血药",e:"（鲜地黄）清热凉血，止血；（生地黄）清热凉血，养阴生津"},
+{n:"玄参",c:"第二章 清热药",s:"清热凉血药",e:"清热凉血，滋阴降火，解毒散结"},
+{n:"牡丹皮",c:"第二章 清热药",s:"清热凉血药",e:"清热凉血，活血化瘀"},
+{n:"赤芍",c:"第二章 清热药",s:"清热凉血药",e:"清热凉血，散瘀止痛"},
+{n:"紫草",c:"第二章 清热药",s:"清热凉血药",e:"清热凉血，透疹消疮，活血解毒"},
+{n:"水牛角",c:"第二章 清热药",s:"清热凉血药",e:"清热凉血，解毒，定惊"},
+{n:"青蒿",c:"第二章 清热药",s:"清虚热药",e:"清虚热，除骨蒸，退黄，解暑热，截疟"},
+{n:"地骨皮",c:"第二章 清热药",s:"清虚热药",e:"凉血除蒸，清肺降火"},
+{n:"白薇",c:"第二章 清热药",s:"清虚热药",e:"清热凉血，利尿通淋，解毒疗疮"},
+{n:"胡黄连",c:"第二章 清热药",s:"清虚热药",e:"退虚热，除疳热，清湿热"},
+{n:"银柴胡",c:"第二章 清热药",s:"清虚热药",e:"清虚热，除疳热"},
+{n:"金银花",c:"第二章 清热药",s:"清热解毒药",e:"清热解毒，疏散风热"},
+{n:"连翘",c:"第二章 清热药",s:"清热解毒药",e:"清热解毒，疏散风热，消肿散结，利尿"},
+{n:"蒲公英",c:"第二章 清热药",s:"清热解毒药",e:"清热解毒，消肿散结，利尿通淋"},
+{n:"鱼腥草",c:"第二章 清热药",s:"清热解毒药",e:"清热解毒，消痈排脓，利尿通淋"},
+{n:"败酱草",c:"第二章 清热药",s:"清热解毒药",e:"清热解毒，消痈排脓，祛瘀止痛"},
+{n:"金荞麦",c:"第二章 清热药",s:"清热解毒药",e:"清热解毒，排脓，祛瘀"},
+{n:"大青叶",c:"第二章 清热药",s:"清热解毒药",e:"清热解毒，凉血消斑"},
+{n:"青黛",c:"第二章 清热药",s:"清热解毒药",e:"清热解毒，凉血消斑，泻火定惊"},
+{n:"板蓝根",c:"第二章 清热药",s:"清热解毒药",e:"清热解毒，凉血，利咽"},
+{n:"射干",c:"第二章 清热药",s:"清热解毒药",e:"清热解毒，消痰利咽"},
+{n:"山豆根",c:"第二章 清热药",s:"清热解毒药",e:"清热解毒，消肿利咽"},
+{n:"马勃",c:"第二章 清热药",s:"清热解毒药",e:"清肺，利咽，止血"},
+{n:"木蝴蝶",c:"第二章 清热药",s:"清热解毒药",e:"清热利咽，疏肝和胃"},
+{n:"白头翁",c:"第二章 清热药",s:"清热解毒药",e:"清热解毒，凉血止痢"},
+{n:"马齿苋",c:"第二章 清热药",s:"清热解毒药",e:"清热解毒，凉血止血，止痢"},
+{n:"鸦胆子",c:"第二章 清热药",s:"清热解毒药",e:"截疟，止痢，腐蚀赘疣"},
+{n:"穿心莲",c:"第二章 清热药",s:"清热解毒药",e:"清热解毒，燥湿"},
+{n:"土茯苓",c:"第二章 清热药",s:"清热解毒药",e:"解毒，通利关节，除湿"},
+{n:"白花蛇舌草",c:"第二章 清热药",s:"清热解毒药",e:"清热解毒，利湿通淋"},
+{n:"地锦草",c:"第二章 清热药",s:"清热解毒药",e:"清热解毒，凉血止血，利湿退黄"},
+{n:"秦皮",c:"第二章 清热药",s:"清热解毒药",e:"收涩止痢，止带，明目"},
+{n:"大血藤",c:"第二章 清热药",s:"清热解毒药",e:"清热解毒，活血，祛风止痛"},
+{n:"野菊花",c:"第二章 清热药",s:"清热解毒药",e:"清热解毒，泻火平肝"},
+{n:"紫花地丁",c:"第二章 清热药",s:"清热解毒药",e:"清热解毒，凉血消肿"},
+{n:"牛黄",c:"第二章 清热药",s:"清热解毒药",e:"清心解毒，凉肝息风，豁痰开窍"},
+{n:"重楼",c:"第二章 清热药",s:"清热解毒药",e:"清热解毒，消肿止痛，凉肝定惊"},
+{n:"半边莲",c:"第二章 清热药",s:"清热解毒药",e:"清热解毒，利尿消肿"},
+{n:"半枝莲",c:"第二章 清热药",s:"清热解毒药",e:"清热解毒，化瘀，利尿"},
+{n:"贯众",c:"第二章 清热药",s:"清热解毒药",e:"驱虫，清热解毒，止血"},
+{n:"山慈菇",c:"第二章 清热药",s:"清热解毒药",e:"清热解毒，化痰散结"},
+{n:"大黄",c:"第三章 泻下药",s:"攻下药",e:"泻下攻积，清热泻火，解毒，凉血，利湿退黄，逐瘀通经"},
+{n:"芒硝",c:"第三章 泻下药",s:"攻下药",e:"泻下通便，润燥软坚，清火消肿"},
+{n:"芦荟",c:"第三章 泻下药",s:"攻下药",e:"泻下通便，清肝泻火，杀虫疗疳"},
+{n:"番泻叶",c:"第三章 泻下药",s:"攻下药",e:"泻热行滞，通便，利水"},
+{n:"火麻仁",c:"第三章 泻下药",s:"润下药",e:"润肠通便"},
+{n:"郁李仁",c:"第三章 泻下药",s:"润下药",e:"润肠通便，下气利水"},
+{n:"甘遂",c:"第三章 泻下药",s:"峻下逐水药",e:"泻水逐饮，消肿散结"},
+{n:"京大戟",c:"第三章 泻下药",s:"峻下逐水药",e:"泻水逐饮，消肿散结"},
+{n:"红大戟",c:"第三章 泻下药",s:"峻下逐水药",e:"泻水逐饮，消肿散结"},
+{n:"巴豆霜",c:"第三章 泻下药",s:"峻下逐水药",e:"峻下冷积，逐水退肿，豁痰利咽，外用蚀疮"},
+{n:"牵牛子",c:"第三章 泻下药",s:"峻下逐水药",e:"泻水通便，消痰涤饮，杀虫攻积"},
+{n:"芫花",c:"第三章 泻下药",s:"峻下逐水药",e:"泻水逐饮，外用杀虫疗疮"},
+{n:"千金子",c:"第三章 泻下药",s:"峻下逐水药",e:"泻水逐饮，破血消癥，外用疗癣蚀疣"},
+{n:"独活",c:"第四章 祛风湿药",s:"祛风湿散寒药",e:"祛风除湿，通痹止痛"},
+{n:"威灵仙",c:"第四章 祛风湿药",s:"祛风湿散寒药",e:"祛风湿，通经络，消骨鲠"},
+{n:"徐长卿",c:"第四章 祛风湿药",s:"祛风湿散寒药",e:"祛风，化湿，止痛，止痒"},
+{n:"木瓜",c:"第四章 祛风湿药",s:"祛风湿散寒药",e:"舒筋活络，和胃化湿，开胃"},
+{n:"蕲蛇",c:"第四章 祛风湿药",s:"祛风湿散寒药",e:"祛风，通络，止痉"},
+{n:"乌梢蛇",c:"第四章 祛风湿药",s:"祛风湿散寒药",e:"祛风，通络，止痉"},
+{n:"川乌",c:"第四章 祛风湿药",s:"祛风湿散寒药",e:"祛风除湿，温经止痛"},
+{n:"伸筋草",c:"第四章 祛风湿药",s:"祛风湿散寒药",e:"祛风除湿，舒筋活络"},
+{n:"路路通",c:"第四章 祛风湿药",s:"祛风湿散寒药",e:"祛风活络，利水，通经，祛风止痒"},
+{n:"海风藤",c:"第四章 祛风湿药",s:"祛风湿散寒药",e:"祛风湿，通经络，止痹痛，祛风湿，通经络，止痹痛"},
+{n:"青风藤",c:"第四章 祛风湿药",s:"祛风湿散寒药",e:"祛风湿，通经络，利小便"},
+{n:"穿山龙",c:"第四章 祛风湿药",s:"祛风湿散寒药",e:"祛风除湿，舒筋通络，活血止痛，止咳平喘"},
+{n:"防己",c:"第四章 祛风湿药",s:"祛风湿清热药",e:"祛风止痛，利水消肿"},
+{n:"秦艽",c:"第四章 祛风湿药",s:"祛风湿清热药",e:"祛风湿，止痹痛，退虚热，清湿热"},
+{n:"豨莶草",c:"第四章 祛风湿药",s:"祛风湿清热药",e:"祛风湿，利关节，解毒，降血压"},
+{n:"臭梧桐",c:"第四章 祛风湿药",s:"祛风湿清热药",e:"祛风除湿，平肝止痛，降血压"},
+{n:"桑枝",c:"第四章 祛风湿药",s:"祛风湿清热药",e:"祛风湿，利关节"},
+{n:"丝瓜络",c:"第四章 祛风湿药",s:"祛风湿清热药",e:"祛风，通络，活血，下乳"},
+{n:"老鹳草",c:"第四章 祛风湿药",s:"祛风湿清热药",e:"祛风湿，通经络，止泻痢"},
+{n:"络石藤",c:"第四章 祛风湿药",s:"祛风湿清热药",e:"祛风通络，凉血消肿"},
+{n:"雷公藤",c:"第四章 祛风湿药",s:"祛风湿清热药",e:"祛风除湿，活血通络，消肿定痛，杀虫解毒"},
+{n:"桑寄生",c:"第四章 祛风湿药",s:"祛风湿强筋骨药",e:"祛风湿，补肝肾，强筋骨，安胎元"},
+{n:"五加皮",c:"第四章 祛风湿药",s:"祛风湿强筋骨药",e:"祛风除湿，补益肝肾，强筋壮骨，利水消肿"},
+{n:"鹿衔草",c:"第四章 祛风湿药",s:"祛风湿强筋骨药",e:"祛风湿，强筋骨，止血，止咳"},
+{n:"千年健",c:"第四章 祛风湿药",s:"祛风湿强筋骨药",e:"祛风湿，壮筋骨"},
+{n:"狗脊",c:"第四章 祛风湿药",s:"祛风湿强筋骨药",e:"祛风湿，补肝肾，强腰膝"},
+{n:"苍术",c:"第五章 化湿药",s:"化湿药",e:"燥湿健脾，祛风散寒，明目"},
+{n:"厚朴",c:"第五章 化湿药",s:"化湿药",e:"燥湿，下气除满，消痰"},
+{n:"广藿香",c:"第五章 化湿药",s:"化湿药",e:"芳香化浊，和中止呕，发表解暑"},
+{n:"佩兰",c:"第五章 化湿药",s:"化湿药",e:"芳香化湿，醒脾开胃，发表解暑"},
+{n:"砂仁",c:"第五章 化湿药",s:"化湿药",e:"化湿开胃，温脾止泻，理气，安胎"},
+{n:"豆蔻",c:"第五章 化湿药",s:"化湿药",e:"化湿行气，温中止呕"},
+{n:"草豆蔻",c:"第五章 化湿药",s:"化湿药",e:"燥湿行气，温中止呕"},
+{n:"草果",c:"第五章 化湿药",s:"化湿药",e:"燥湿温中，除痰截疟"},
+{n:"茯苓",c:"第六章 利水渗湿药",s:"利水渗湿药",e:"利水渗湿，健脾，宁心"},
+{n:"薏苡仁",c:"第六章 利水渗湿药",s:"利水渗湿药",e:"利水渗湿，健脾止泻，除痹，排脓，解毒散结"},
+{n:"猪苓",c:"第六章 利水渗湿药",s:"利水渗湿药",e:"利水渗湿"},
+{n:"泽泻",c:"第六章 利水渗湿药",s:"利水渗湿药",e:"利水渗湿，化浊降脂"},
+{n:"香加皮",c:"第六章 利水渗湿药",s:"利水渗湿药",e:"利水消肿，祛风湿，强筋骨"},
+{n:"枳椇子",c:"第六章 利水渗湿药",s:"利水渗湿药",e:"通利二便，解酒毒，止渴除烦"},
+{n:"车前子",c:"第六章 利水渗湿药",s:"利尿通淋药",e:"清热利尿通淋，渗湿止泻，明目，祛痰"},
+{n:"滑石",c:"第六章 利水渗湿药",s:"利尿通淋药",e:"利尿通淋，清解暑热，外用祛湿敛疮"},
+{n:"木通",c:"第六章 利水渗湿药",s:"利尿通淋药",e:"利尿通淋，清心除烦，通经下乳"},
+{n:"通草",c:"第六章 利水渗湿药",s:"利尿通淋药",e:"清热利尿，通气下乳"},
+{n:"冬葵子",c:"第六章 利水渗湿药",s:"利尿通淋药",e:"利水通淋，下乳，润肠通便"},
+{n:"萆薢",c:"第六章 利水渗湿药",s:"利尿通淋药",e:"利湿去浊，祛风除痹"},
+{n:"石韦",c:"第六章 利水渗湿药",s:"利尿通淋药",e:"利尿通淋，凉血止血，清肺止咳"},
+{n:"海金沙",c:"第六章 利水渗湿药",s:"利尿通淋药",e:"清利湿热，通淋止痛"},
+{n:"瞿麦",c:"第六章 利水渗湿药",s:"利尿通淋药",e:"利尿通淋，活血通经"},
+{n:"萹蓄",c:"第六章 利水渗湿药",s:"利尿通淋药",e:"利尿通淋，杀虫止痒"},
+{n:"地肤子",c:"第六章 利水渗湿药",s:"利尿通淋药",e:"清热利湿，祛风止痒"},
+{n:"灯心草",c:"第六章 利水渗湿药",s:"利尿通淋药",e:"利小便，清心火"},
+{n:"金钱草",c:"第六章 利水渗湿药",s:"利湿退黄药",e:"利尿通淋，利湿退黄，解毒消肿"},
+{n:"茵陈",c:"第六章 利水渗湿药",s:"利湿退黄药",e:"清利湿热，利胆退黄"},
+{n:"广金钱草",c:"第六章 利水渗湿药",s:"利湿退黄药",e:"利湿退黄，利尿通淋"},
+{n:"虎杖",c:"第六章 利水渗湿药",s:"利湿退黄药",e:"利湿退黄，清热解毒，散瘀止痛，止咳化痰，泻下通便"},
+{n:"垂盆草",c:"第六章 利水渗湿药",s:"利湿退黄药",e:"利湿退黄，清热解毒"},
+{n:"连钱草",c:"第六章 利水渗湿药",s:"利湿退黄药",e:"利湿通淋，清热解毒，散瘀消肿"},
+{n:"附子",c:"第七章 温里药",s:"温里药",e:"回阳救逆，补火助阳，散寒止痛"},
+{n:"干姜",c:"第七章 温里药",s:"温里药",e:"温中散寒，回阳通脉，温肺化饮"},
+{n:"肉桂",c:"第七章 温里药",s:"温里药",e:"补火助阳，引火归元，散寒止痛，温通经脉"},
+{n:"吴茱萸",c:"第七章 温里药",s:"温里药",e:"散寒止痛，降逆止呕，助阳止泻"},
+{n:"花椒",c:"第七章 温里药",s:"温里药",e:"温中止痛，杀虫止痒"},
+{n:"丁香",c:"第七章 温里药",s:"温里药",e:"温中降逆，补肾助阳"},
+{n:"小茴香",c:"第七章 温里药",s:"温里药",e:"散寒止痛，理气和胃"},
+{n:"高良姜",c:"第七章 温里药",s:"温里药",e:"散寒止痛，温胃止呕"},
+{n:"荜茇",c:"第七章 温里药",s:"温里药",e:"温中散寒，下气止痛"},
+{n:"荜澄茄",c:"第七章 温里药",s:"温里药",e:"温中散寒，行气止痛"},
+{n:"陈皮",c:"第八章 理气药",s:"理气药",e:"理气健脾，燥湿化痰"},
+{n:"化橘红",c:"第八章 理气药",s:"理气药",e:"理气宽中，燥湿化痰"},
+{n:"橘红",c:"第八章 理气药",s:"理气药",e:"理气宽中，燥湿化痰"},
+{n:"青皮",c:"第八章 理气药",s:"理气药",e:"疏肝破气，消积化滞"},
+{n:"枳实",c:"第八章 理气药",s:"理气药",e:"破气消积，化痰除痞"},
+{n:"枳壳",c:"第八章 理气药",s:"理气药",e:"理气宽中，行滞消胀"},
+{n:"木香",c:"第八章 理气药",s:"理气药",e:"行气止痛，健脾消食"},
+{n:"香附",c:"第八章 理气药",s:"理气药",e:"疏肝解郁，调经止痛，理气宽中"},
+{n:"沉香",c:"第八章 理气药",s:"理气药",e:"行气止痛，温中止呕，纳气平喘"},
+{n:"川楝子",c:"第八章 理气药",s:"理气药",e:"疏肝泄热 行气止痛，杀虫"},
+{n:"乌药",c:"第八章 理气药",s:"理气药",e:"行气止痛，散寒，温肾"},
+{n:"荔枝核",c:"第八章 理气药",s:"理气药",e:"行气散结，祛寒止痛"},
+{n:"甘松",c:"第八章 理气药",s:"理气药",e:"行气止痛，开郁醒脾，外用祛湿消肿"},
+{n:"佛手",c:"第八章 理气药",s:"理气药",e:"疏肝理气，和胃止痛，燥湿化痰"},
+{n:"香橼",c:"第八章 理气药",s:"理气药",e:"疏肝理气，宽中，化痰"},
+{n:"梅花",c:"第八章 理气药",s:"理气药",e:"疏肝，和中，化痰散结"},
+{n:"玫瑰花",c:"第八章 理气药",s:"理气药",e:"行气解郁，和血止痛"},
+{n:"娑罗子",c:"第八章 理气药",s:"理气药",e:"疏肝理气，和胃止痛"},
+{n:"九香虫",c:"第八章 理气药",s:"理气药",e:"理气止痛，温中助阳"},
+{n:"薤白",c:"第八章 理气药",s:"理气药",e:"通阳散结，行气导滞"},
+{n:"柿蒂",c:"第八章 理气药",s:"理气药",e:"降气止呃"},
+{n:"刀豆",c:"第八章 理气药",s:"理气药",e:"温中，下气，止呃"},
+{n:"大腹皮",c:"第八章 理气药",s:"理气药",e:"行气宽中，利水消肿"},
+{n:"山楂",c:"第九章 消食药",s:"消食药",e:"消食健胃，行气散瘀，化浊降脂"},
+{n:"麦芽",c:"第九章 消食药",s:"消食药",e:"行气消食，健脾开胃，回乳消胀"},
+{n:"六神曲",c:"第九章 消食药",s:"消食药",e:"消食化积，健脾和胃"},
+{n:"莱菔子",c:"第九章 消食药",s:"消食药",e:"消食除胀，降气化痰"},
+{n:"鸡内金",c:"第九章 消食药",s:"消食药",e:"健脾消食，涩精止遗，通淋化石"},
+{n:"稻芽",c:"第九章 消食药",s:"消食药",e:"消食和中，健脾开胃"},
+{n:"使君子",c:"第十章 驱虫药",s:"驱虫药",e:"杀虫，消积"},
+{n:"苦楝皮",c:"第十章 驱虫药",s:"驱虫药",e:"杀虫，疗癣"},
+{n:"槟榔",c:"第十章 驱虫药",s:"驱虫药",e:"杀虫，消积，行气，利水，截疟"},
+{n:"雷丸",c:"第十章 驱虫药",s:"驱虫药",e:"杀虫，消积"},
+{n:"南瓜子",c:"第十章 驱虫药",s:"驱虫药",e:"杀虫"},
+{n:"鹤草芽",c:"第十章 驱虫药",s:"驱虫药",e:"杀虫"},
+{n:"榧子",c:"第十章 驱虫药",s:"驱虫药",e:"杀虫，消积，润燥通便，润肺止咳"},
+{n:"大蓟",c:"第十一章 止血药",s:"凉血止血药",e:"凉血止血，散瘀解毒消痈"},
+{n:"小蓟",c:"第十一章 止血药",s:"凉血止血药",e:"凉血止血，散瘀解毒消痈"},
+{n:"地榆",c:"第十一章 止血药",s:"凉血止血药",e:"凉血止血，解毒敛疮"},
+{n:"槐花",c:"第十一章 止血药",s:"凉血止血药",e:"凉血止血，清肝泻火"},
+{n:"白茅根",c:"第十一章 止血药",s:"凉血止血药",e:"凉血止血，清热，利尿"},
+{n:"苎麻根",c:"第十一章 止血药",s:"凉血止血药",e:"凉血止血，安胎，解毒"},
+{n:"侧柏叶",c:"第十一章 止血药",s:"凉血止血药",e:"凉血止血，化痰止咳，生发乌发"},
+{n:"三七",c:"第十一章 止血药",s:"化瘀止血药",e:"散瘀止血，消肿定痛"},
+{n:"景天三七",c:"第十一章 止血药",s:"化瘀止血药",e:"散瘀止血，安神"},
+{n:"茜草",c:"第十一章 止血药",s:"化瘀止血药",e:"凉血止血，祛瘀通经"},
+{n:"蒲黄",c:"第十一章 止血药",s:"化瘀止血药",e:"化瘀，止血，通淋"},
+{n:"血余炭",c:"第十一章 止血药",s:"化瘀止血药",e:"收敛化瘀止血，利尿"},
+{n:"白及",c:"第十一章 止血药",s:"收敛止血药",e:"收敛止血，消肿生肌"},
+{n:"仙鹤草",c:"第十一章 止血药",s:"收敛止血药",e:"收敛止血，止痢，截疟，解毒，补虚"},
+{n:"紫珠叶",c:"第十一章 止血药",s:"收敛止血药",e:"收敛凉血止血，散瘀解毒消肿"},
+{n:"鸡冠花",c:"第十一章 止血药",s:"收敛止血药",e:"收敛止血，止带，止痢"},
+{n:"棕榈炭",c:"第十一章 止血药",s:"收敛止血药",e:"收敛止血"},
+{n:"藕节",c:"第十一章 止血药",s:"收敛止血药",e:"收敛止血，化瘀"},
+{n:"艾叶",c:"第十一章 止血药",s:"温经止血药",e:"温经止血，散寒止痛，外用祛湿止痒"},
+{n:"炮姜",c:"第十一章 止血药",s:"温经止血药",e:"温经止血，温中止痛"},
+{n:"川芎",c:"第十二章 活血祛瘀药",s:"活血祛瘀药",e:"活血行气止痛，祛风"},
+{n:"延胡索",c:"第十二章 活血祛瘀药",s:"活血祛瘀药",e:"活血，行气，止痛"},
+{n:"郁金",c:"第十二章 活血祛瘀药",s:"活血祛瘀药",e:"活血行气止痛， 解郁，清心，凉血，利胆退黄"},
+{n:"莪术",c:"第十二章 活血祛瘀药",s:"活血祛瘀药",e:"行气破血，消积止痛"},
+{n:"三棱",c:"第十二章 活血祛瘀药",s:"活血祛瘀药",e:"破血行气，消积止痛"},
+{n:"姜黄",c:"第十二章 活血祛瘀药",s:"活血祛瘀药",e:"破血行气，通经止痛"},
+{n:"乳香",c:"第十二章 活血祛瘀药",s:"活血祛瘀药",e:"活血定痛，消肿生肌"},
+{n:"没药",c:"第十二章 活血祛瘀药",s:"活血祛瘀药",e:"散瘀定痛，消肿生肌"},
+{n:"穿山甲",c:"第十二章 活血祛瘀药",s:"活血祛瘀药",e:"活血消癥，通经下乳，消肿排脓，搜风通络"},
+{n:"王不留行",c:"第十二章 活血祛瘀药",s:"活血祛瘀药",e:"活血通经，下乳消肿，利尿通淋"},
+{n:"益母草",c:"第十二章 活血祛瘀药",s:"活血祛瘀药",e:"活血调经，利尿消肿，清热解毒"},
+{n:"泽兰",c:"第十二章 活血祛瘀药",s:"活血祛瘀药",e:"活血调经，祛瘀消痈，利水消肿"},
+{n:"牛膝",c:"第十二章 活血祛瘀药",s:"活血祛瘀药",e:"逐瘀通经，利尿通淋，引血下行，补肝肾，强筋骨"},
+{n:"川牛膝",c:"第十二章 活血祛瘀药",s:"活血祛瘀药",e:"逐瘀通经，通利关节，利尿通淋"},
+{n:"红花",c:"第十二章 活血祛瘀药",s:"活血祛瘀药",e:"活血通经， 散瘀止痛"},
+{n:"西红花",c:"第十二章 活血祛瘀药",s:"活血祛瘀药",e:"活血化瘀，凉血解毒，解郁安神"},
+{n:"五灵脂",c:"第十二章 活血祛瘀药",s:"活血祛瘀药",e:"活血止痛，化瘀止血，解蛇虫毒"},
+{n:"血竭",c:"第十二章 活血祛瘀药",s:"活血祛瘀药",e:"活血定痛，化瘀止血，生肌敛疮"},
+{n:"刘寄奴",c:"第十二章 活血祛瘀药",s:"活血祛瘀药",e:"活血通经，散瘀止痛，止血消肿，消食化积"},
+{n:"北刘寄奴",c:"第十二章 活血祛瘀药",s:"活血祛瘀药",e:"活血祛瘀，通经止痛，凉血止血，清热利湿"},
+{n:"儿茶",c:"第十二章 活血祛瘀药",s:"活血祛瘀药",e:"活血止痛，止血生肌，收湿敛疮，清肺化痰"},
+{n:"丹参",c:"第十二章 活血祛瘀药",s:"活血祛瘀药",e:"活血祛瘀，通经止痛，清心除烦，凉血消痈"},
+{n:"鸡血藤",c:"第十二章 活血祛瘀药",s:"活血祛瘀药",e:"活血补血，调经止痛，舒筋活络"},
+{n:"桃仁",c:"第十二章 活血祛瘀药",s:"活血祛瘀药",e:"活血祛瘀，润肠通便，止咳平喘"},
+{n:"月季花",c:"第十二章 活血祛瘀药",s:"活血祛瘀药",e:"活血调经，疏肝解郁"},
+{n:"水蛭",c:"第十二章 活血祛瘀药",s:"活血祛瘀药",e:"破血通经，逐瘀消癥"},
+{n:"土鳖虫",c:"第十二章 活血祛瘀药",s:"活血祛瘀药",e:"破血逐瘀，续筋接骨"},
+{n:"自然铜",c:"第十二章 活血祛瘀药",s:"活血祛瘀药",e:"散瘀止痛，续筋接骨"},
+{n:"骨碎补",c:"第十二章 活血祛瘀药",s:"活血祛瘀药",e:"疗伤止痛，补肾强骨，外用消风祛斑"},
+{n:"苏木",c:"第十二章 活血祛瘀药",s:"活血祛瘀药",e:"活血祛瘀，消肿止痛"},
+{n:"斑蝥",c:"第十二章 活血祛瘀药",s:"活血祛瘀药",e:"破血逐瘀，散结消癥，攻毒蚀疮"},
+{n:"马钱子",c:"第十二章 活血祛瘀药",s:"活血祛瘀药",e:"通络止痛，散结消肿"},
+{n:"半夏",c:"第十三章 化痰止咳平喘药",s:"温化寒痰药",e:"燥湿化痰，降逆止呕，消痞散结"},
+{n:"天南星",c:"第十三章 化痰止咳平喘药",s:"温化寒痰药",e:"燥湿化痰，祛风止痉，散结消肿"},
+{n:"白附子",c:"第十三章 化痰止咳平喘药",s:"温化寒痰药",e:"祛风痰，定惊搐，解毒散结，止痛"},
+{n:"芥子",c:"第十三章 化痰止咳平喘药",s:"温化寒痰药",e:"温肺豁痰利气，散结通络止痛"},
+{n:"旋覆花",c:"第十三章 化痰止咳平喘药",s:"温化寒痰药",e:"消痰行水，降气止呕"},
+{n:"猫爪草",c:"第十三章 化痰止咳平喘药",s:"温化寒痰药",e:"化痰散结，解毒消肿"},
+{n:"白前",c:"第十三章 化痰止咳平喘药",s:"温化寒痰药",e:"降气、消痰、止咳"},
+{n:"前胡",c:"第十三章 化痰止咳平喘药",s:"清化热痰药",e:"降气化痰，散风清热"},
+{n:"桔梗",c:"第十三章 化痰止咳平喘药",s:"清化热痰药",e:"宣肺，利咽，祛痰，排脓"},
+{n:"瓜蒌",c:"第十三章 化痰止咳平喘药",s:"清化热痰药",e:"清肺涤痰，宽胸，散结，润燥滑肠"},
+{n:"川贝母",c:"第十三章 化痰止咳平喘药",s:"清化热痰药",e:"清热润肺，化痰止咳，散结消痈"},
+{n:"浙贝母",c:"第十三章 化痰止咳平喘药",s:"清化热痰药",e:"清热化痰止咳，解毒散结消痈"},
+{n:"竹茹",c:"第十三章 化痰止咳平喘药",s:"清化热痰药",e:"清热化痰，除烦止呕"},
+{n:"竹沥",c:"第十三章 化痰止咳平喘药",s:"清化热痰药",e:"清热滑痰，定惊利窍"},
+{n:"天竺黄",c:"第十三章 化痰止咳平喘药",s:"清化热痰药",e:"清热豁痰，凉心定惊"},
+{n:"昆布",c:"第十三章 化痰止咳平喘药",s:"清化热痰药",e:"消痰软坚散结，利水消肿"},
+{n:"海藻",c:"第十三章 化痰止咳平喘药",s:"清化热痰药",e:"消痰软坚散结，利水消肿"},
+{n:"黄药子",c:"第十三章 化痰止咳平喘药",s:"清化热痰药",e:"化痰散结消瘿，清热凉血解毒"},
+{n:"瓦楞子",c:"第十三章 化痰止咳平喘药",s:"清化热痰药",e:"消痰化瘀，软坚散结，制酸止痛"},
+{n:"蛤壳",c:"第十三章 化痰止咳平喘药",s:"清化热痰药",e:"清热化痰，软坚散结，制酸止痛，外用收湿敛疮"},
+{n:"海浮石",c:"第十三章 化痰止咳平喘药",s:"清化热痰药",e:"清热化痰，软坚散结，利尿通淋"},
+{n:"礞石",c:"第十三章 化痰止咳平喘药",s:"清化热痰药",e:"坠痰下气，平肝镇惊"},
+{n:"苦杏仁",c:"第十三章 化痰止咳平喘药",s:"止咳平喘药",e:"降气止咳平喘，润肠通便"},
+{n:"紫苏子",c:"第十三章 化痰止咳平喘药",s:"止咳平喘药",e:"降气化痰，止咳平喘，润肠通便"},
+{n:"桑白皮",c:"第十三章 化痰止咳平喘药",s:"止咳平喘药",e:"泻肺平喘，利水消肿"},
+{n:"葶苈子",c:"第十三章 化痰止咳平喘药",s:"止咳平喘药",e:"泻肺平喘，行水消肿"},
+{n:"百部",c:"第十三章 化痰止咳平喘药",s:"止咳平喘药",e:"润肺下气止咳，杀虫灭虱"},
+{n:"紫菀",c:"第十三章 化痰止咳平喘药",s:"止咳平喘药",e:"润肺下气，消痰止咳"},
+{n:"款冬花",c:"第十三章 化痰止咳平喘药",s:"止咳平喘药",e:"润肺下气，止咳化痰"},
+{n:"枇杷叶",c:"第十三章 化痰止咳平喘药",s:"止咳平喘药",e:"清肺止咳，降逆止呕"},
+{n:"马兜铃",c:"第十三章 化痰止咳平喘药",s:"止咳平喘药",e:"清肺化痰，止咳平喘，清肠疗痔"},
+{n:"白果",c:"第十三章 化痰止咳平喘药",s:"止咳平喘药",e:"敛肺定喘，止带缩尿"},
+{n:"胖大海",c:"第十三章 化痰止咳平喘药",s:"止咳平喘药",e:"清热润肺，利咽开音，润肠通便"},
+{n:"洋金花",c:"第十三章 化痰止咳平喘药",s:"止咳平喘药",e:"平喘止咳，解痉，定痛"},
+{n:"朱砂",c:"第十四章 安神药",s:"重镇安神药",e:"镇惊安神，清心解毒，明目"},
+{n:"磁石",c:"第十四章 安神药",s:"重镇安神药",e:"镇惊安神，平肝潜阳，聪耳明目，纳气平喘"},
+{n:"龙骨",c:"第十四章 安神药",s:"重镇安神药",e:"镇惊安神，平肝潜阳，收敛固涩，收湿敛疮"},
+{n:"牡蛎",c:"第十四章 安神药",s:"重镇安神药",e:"潜阳补阴，重镇安神，软坚散结，收敛固涩，制酸止痛"},
+{n:"琥珀",c:"第十四章 安神药",s:"重镇安神药",e:"安神定惊，活血散瘀，利尿通淋"},
+{n:"珍珠",c:"第十四章 安神药",s:"重镇安神药",e:"安神定惊，明目消翳，解毒生肌，润肤祛斑"},
+{n:"酸枣仁",c:"第十四章 安神药",s:"养心安神药",e:"养心补肝，宁心安神，敛汗"},
+{n:"柏子仁",c:"第十四章 安神药",s:"养心安神药",e:"养心安神，润肠通便，止汗"},
+{n:"远志",c:"第十四章 安神药",s:"养心安神药",e:"安神益智，交通心肾，祛痰，消肿"},
+{n:"合欢皮",c:"第十四章 安神药",s:"养心安神药",e:"解郁安神，活血消肿"},
+{n:"首乌藤",c:"第十四章 安神药",s:"养心安神药",e:"养血安神，祛风通络"},
+{n:"石决明",c:"第十五章 平肝息风药",s:"平抑肝阳药",e:"平肝潜阳，清肝明目"},
+{n:"赭石",c:"第十五章 平肝息风药",s:"平抑肝阳药",e:"平肝潜阳，重镇降逆，凉血止血"},
+{n:"蒺藜",c:"第十五章 平肝息风药",s:"平抑肝阳药",e:"平肝，解郁，活血祛风明目，止痒"},
+{n:"珍珠母",c:"第十五章 平肝息风药",s:"平抑肝阳药",e:"平肝潜阳，清肝明目，安神定惊，收湿敛疮"},
+{n:"罗布麻叶",c:"第十五章 平肝息风药",s:"平抑肝阳药",e:"平肝，安神，清热利水"},
+{n:"羚羊角",c:"第十五章 平肝息风药",s:"息风止痉药",e:"平肝息风，清肝明目，散血解毒"},
+{n:"钩藤",c:"第十五章 平肝息风药",s:"息风止痉药",e:"息风止痉，清热平肝"},
+{n:"天麻",c:"第十五章 平肝息风药",s:"息风止痉药",e:"息风止痉，平抑肝阳，祛风通络"},
+{n:"全蝎",c:"第十五章 平肝息风药",s:"息风止痉药",e:"息风止痉，攻毒散结，通络止痛"},
+{n:"蜈蚣",c:"第十五章 平肝息风药",s:"息风止痉药",e:"息风止痉，攻毒散结，通络止痛"},
+{n:"地龙",c:"第十五章 平肝息风药",s:"息风止痉药",e:"清热定惊，平喘，通络，利尿"},
+{n:"僵蚕",c:"第十五章 平肝息风药",s:"息风止痉药",e:"息风止痉，祛风止痛，化痰散结"},
+{n:"麝香",c:"第十六章 开窍药",s:"开窍药",e:"开窍醒神，活血通经，消肿止痛"},
+{n:"冰片",c:"第十六章 开窍药",s:"开窍药",e:"开窍醒神，清热止痛"},
+{n:"蟾酥",c:"第十六章 开窍药",s:"开窍药",e:"开窍醒神，解毒，止痛"},
+{n:"苏合香",c:"第十六章 开窍药",s:"开窍药",e:"开窍辟秽，止痛"},
+{n:"安息香",c:"第十六章 开窍药",s:"开窍药",e:"开窍醒神，行气活血，止痛"},
+{n:"石菖蒲",c:"第十六章 开窍药",s:"开窍药",e:"开窍豁痰，醒神益智，化湿开胃"},
+{n:"人参",c:"第十七章 补虚药",s:"补气药",e:"大补元气、复脉固脱，补脾益肺，生津养血，安神益智"},
+{n:"党参",c:"第十七章 补虚药",s:"补气药",e:"健脾益肺，生津，养血"},
+{n:"西洋参",c:"第十七章 补虚药",s:"补气药",e:"补气养阴，清热生津"},
+{n:"太子参",c:"第十七章 补虚药",s:"补气药",e:"益气健脾，生津润肺"},
+{n:"黄芪",c:"第十七章 补虚药",s:"补气药",e:"补气升阳，益卫固表，托毒排脓，敛疮生肌，利水消肿，生津养血，行滞通痹"},
+{n:"白术",c:"第十七章 补虚药",s:"补气药",e:"健脾益气，燥湿利水，止汗，安胎"},
+{n:"山药",c:"第十七章 补虚药",s:"补气药",e:"补脾养胃，生津益肺，补肾涩精"},
+{n:"刺五加",c:"第十七章 补虚药",s:"补气药",e:"益气健脾，补肾，安神"},
+{n:"甘草",c:"第十七章 补虚药",s:"补气药",e:"补脾益气，祛痰止咳，清热解毒，缓急止痛，调和诸药"},
+{n:"绞股蓝",c:"第十七章 补虚药",s:"补气药",e:"益气健脾，化痰止咳，清热解毒，化浊降脂"},
+{n:"红景天",c:"第十七章 补虚药",s:"补气药",e:"益气，平喘，活血通脉"},
+{n:"白扁豆",c:"第十七章 补虚药",s:"补气药",e:"健脾化湿，和中消暑"},
+{n:"大枣",c:"第十七章 补虚药",s:"补气药",e:"补中益气，养血安神"},
+{n:"蜂蜜",c:"第十七章 补虚药",s:"补气药",e:"补中，润燥，止痛，解毒，外用生肌敛疮"},
+{n:"饴糖",c:"第十七章 补虚药",s:"补气药",e:"补脾益气，缓急止痛，润肺止咳"},
+{n:"鹿茸",c:"第十七章 补虚药",s:"补阳药",e:"壮肾阳，益精血，强筋骨，调冲任，托疮毒"},
+{n:"肉苁蓉",c:"第十七章 补虚药",s:"补阳药",e:"补肾阳，益精血，润肠通便"},
+{n:"锁阳",c:"第十七章 补虚药",s:"补阳药",e:"补肾阳，益精血，润肠通便"},
+{n:"淫羊藿",c:"第十七章 补虚药",s:"补阳药",e:"补肾阳，强筋骨，祛风湿"},
+{n:"仙茅",c:"第十七章 补虚药",s:"补阳药",e:"补肾阳，强筋骨，祛寒湿"},
+{n:"巴戟天",c:"第十七章 补虚药",s:"补阳药",e:"补肾阳，强筋骨，祛风湿"},
+{n:"杜仲",c:"第十七章 补虚药",s:"补阳药",e:"补肝肾，强筋骨，安胎"},
+{n:"续断",c:"第十七章 补虚药",s:"补阳药",e:"补肝肾，强筋骨，止崩漏，续折伤"},
+{n:"补骨脂",c:"第十七章 补虚药",s:"补阳药",e:"温肾助阳，温脾止泻，纳气平喘，外用消风祛斑"},
+{n:"益智",c:"第十七章 补虚药",s:"补阳药",e:"暖肾固精缩尿，温脾止泻摄唾"},
+{n:"菟丝子",c:"第十七章 补虚药",s:"补阳药",e:"补益肝肾，固精缩尿，明目，止泻，安胎，外用消风祛斑"},
+{n:"沙苑子",c:"第十七章 补虚药",s:"补阳药",e:"补肾助阳，固精缩尿，养肝明目"},
+{n:"蛤蚧",c:"第十七章 补虚药",s:"补阳药",e:"补肺益肾，纳气定喘，助阳益精"},
+{n:"冬虫夏草",c:"第十七章 补虚药",s:"补阳药",e:"补肾益肺，止血化痰"},
+{n:"核桃仁",c:"第十七章 补虚药",s:"补阳药",e:"补肾，温肺，润肠"},
+{n:"紫河车",c:"第十七章 补虚药",s:"补阳药",e:"温肾补精，益气养血"},
+{n:"海马",c:"第十七章 补虚药",s:"补阳药",e:"温肾壮阳，散结消肿"},
+{n:"当归",c:"第十七章 补虚药",s:"补血药",e:"补血活血，调经止痛，润肠通便"},
+{n:"熟地黄",c:"第十七章 补虚药",s:"补血药",e:"补血滋阴，益精填髓"},
+{n:"何首乌",c:"第十七章 补虚药",s:"补血药",e:"补肝肾，益精血，乌须发，强筋骨，化浊降脂，解毒，消痈，截疟，润肠通便"},
+{n:"白芍",c:"第十七章 补虚药",s:"补血药",e:"养血调经，敛阴止汗，柔肝止痛，平抑肝阳"},
+{n:"阿胶",c:"第十七章 补虚药",s:"补血药",e:"补血止血，滋阴润燥"},
+{n:"龙眼肉",c:"第十七章 补虚药",s:"补血药",e:"补益心脾，养血安神"},
+{n:"北沙参",c:"第十七章 补虚药",s:"补阴药",e:"养阴清肺，益胃生津"},
+{n:"南沙参",c:"第十七章 补虚药",s:"补阴药",e:"养阴清肺，化痰，益胃生津，益气"},
+{n:"麦冬",c:"第十七章 补虚药",s:"补阴药",e:"养阴生津，润肺，清心"},
+{n:"天冬",c:"第十七章 补虚药",s:"补阴药",e:"养阴润燥，清肺生津"},
+{n:"玉竹",c:"第十七章 补虚药",s:"补阴药",e:"养阴润燥，生津止渴"},
+{n:"桑椹",c:"第十七章 补虚药",s:"补阴药",e:"滋阴补血，生津，润燥"},
+{n:"石斛",c:"第十七章 补虚药",s:"补阴药",e:"益胃生津，滋阴清热"},
+{n:"黄精",c:"第十七章 补虚药",s:"补阴药",e:"补气养阴，健脾，润肺，益肾"},
+{n:"百合",c:"第十七章 补虚药",s:"补阴药",e:"养阴润肺，清心安神"},
+{n:"枸杞子",c:"第十七章 补虚药",s:"补阴药",e:"滋补肝肾，益精明目"},
+{n:"女贞子",c:"第十七章 补虚药",s:"补阴药",e:"滋补肝肾，明目乌发"},
+{n:"墨旱莲",c:"第十七章 补虚药",s:"补阴药",e:"滋补肝肾，凉血止血"},
+{n:"龟甲",c:"第十七章 补虚药",s:"补阴药",e:"滋阴潜阳，益肾强骨，养血补心，固经止崩"},
+{n:"鳖甲",c:"第十七章 补虚药",s:"补阴药",e:"滋阴潜阳，退热除蒸，软坚散结"},
+{n:"楮实子",c:"第十七章 补虚药",s:"补阴药",e:"补肾清肝，明目，利尿"},
+{n:"哈蟆油",c:"第十七章 补虚药",s:"补阴药",e:"补肾益精，养阴润肺"},
+{n:"五味子",c:"第十八章 收涩药",s:"敛肺涩肠药",e:"收敛固涩，益气生津，补肾宁心"},
+{n:"五倍子",c:"第十八章 收涩药",s:"敛肺涩肠药",e:"敛肺降火，涩肠止泻，固精止遗，敛汗，止血，收湿敛疮"},
+{n:"乌梅",c:"第十八章 收涩药",s:"敛肺涩肠药",e:"敛肺，涩肠，生津，安蛔"},
+{n:"诃子",c:"第十八章 收涩药",s:"敛肺涩肠药",e:"涩肠止泻，敛肺止咳，降火利咽"},
+{n:"罂粟壳",c:"第十八章 收涩药",s:"敛肺涩肠药",e:"敛肺，涩肠，止痛"},
+{n:"肉豆蔻",c:"第十八章 收涩药",s:"敛肺涩肠药",e:"涩肠止泻，温中行气"},
+{n:"赤石脂",c:"第十八章 收涩药",s:"敛肺涩肠药",e:"涩肠止泻，收敛止血，生肌敛疮"},
+{n:"石榴皮",c:"第十八章 收涩药",s:"敛肺涩肠药",e:"涩肠止泻，止血，驱虫"},
+{n:"椿皮",c:"第十八章 收涩药",s:"固精缩尿止带药",e:"清热燥湿，止泻，止血，收敛止带"},
+{n:"莲子",c:"第十八章 收涩药",s:"固精缩尿止带药",e:"补脾止泻，益肾涩精，止带，养心安神"},
+{n:"芡实",c:"第十八章 收涩药",s:"固精缩尿止带药",e:"补脾止泻，益肾固精，除湿止带"},
+{n:"海螵蛸",c:"第十八章 收涩药",s:"固精缩尿止带药",e:"收敛止血，涩精止带，制酸止痛，收湿敛疮"},
+{n:"桑螵蛸",c:"第十八章 收涩药",s:"固精缩尿止带药",e:"固精缩尿，补肾助阳"},
+{n:"覆盆子",c:"第十八章 收涩药",s:"固精缩尿止带药",e:"益肾固精缩尿，养肝明目"},
+{n:"山茱萸",c:"第十八章 收涩药",s:"固精缩尿止带药",e:"补益肝肾，收敛固脱"},
+{n:"金樱子",c:"第十八章 收涩药",s:"固精缩尿止带药",e:"固精缩尿，涩肠止泻，固崩止带"},
+{n:"麻黄根",c:"第十八章 收涩药",s:"止汗药",e:"固表止汗"},
+{n:"浮小麦",c:"第十八章 收涩药",s:"止汗药",e:"益气，固表止汗，除热"},
+{n:"糯稻根",c:"第十八章 收涩药",s:"止汗药",e:"固表止汗，益胃生津，退虚热"},
+{n:"常山",c:"第十九章 涌吐药",s:"涌吐药",e:"涌吐痰饮，截疟"},
+{n:"瓜蒂",c:"第十九章 涌吐药",s:"涌吐药",e:"涌吐痰食，祛湿退黄"},
+{n:"藜芦",c:"第十九章 涌吐药",s:"涌吐药",e:"涌吐风痰，杀虫疗癣"},
+{n:"雄黄",c:"第二十章 杀虫燥湿止痒药",s:"杀虫燥湿止痒药",e:"解毒，杀虫，燥湿祛痰，截疟"},
+{n:"硫黄",c:"第二十章 杀虫燥湿止痒药",s:"杀虫燥湿止痒药",e:"外用解毒杀虫疗疮，内服补火助阳通便"},
+{n:"白矾",c:"第二十章 杀虫燥湿止痒药",s:"杀虫燥湿止痒药",e:"外用解毒杀虫，燥湿止痒，止血止泻，祛除风痰"},
+{n:"蛇床子",c:"第二十章 杀虫燥湿止痒药",s:"杀虫燥湿止痒药",e:"燥湿祛风，杀虫止痒，温肾壮阳"},
+{n:"蜂房",c:"第二十章 杀虫燥湿止痒药",s:"杀虫燥湿止痒药",e:"攻毒杀虫，祛风止痛"},
+{n:"土荆皮",c:"第二十章 杀虫燥湿止痒药",s:"杀虫燥湿止痒药",e:"杀虫，疗癣，止痒"},
+{n:"大蒜",c:"第二十章 杀虫燥湿止痒药",s:"杀虫燥湿止痒药",e:"解毒，消肿，杀虫，止痢"},
+{n:"轻粉",c:"第二十一章 拔毒化腐生肌药",s:"拔毒化腐生肌药",e:"外用杀虫、攻毒、敛疮，内服祛痰消积，逐水通便"},
+{n:"红粉",c:"第二十一章 拔毒化腐生肌药",s:"拔毒化腐生肌药",e:"拔毒，除脓，去腐，生肌"},
+{n:"铅丹",c:"第二十一章 拔毒化腐生肌药",s:"拔毒化腐生肌药",e:"拔毒生肌，杀虫止痒，坠痰镇惊"},
+{n:"炉甘石",c:"第二十一章 拔毒化腐生肌药",s:"拔毒化腐生肌药",e:"解毒明目退翳，收湿止痒敛疮"},
+{n:"砒石",c:"第二十一章 拔毒化腐生肌药",s:"拔毒化腐生肌药",e:"外用攻毒杀虫，蚀疮去腐，劫痰平喘，攻毒抑癌"},
+{n:"硼砂",c:"第二十一章 拔毒化腐生肌药",s:"拔毒化腐生肌药",e:"外用清热解毒，内服清肺化痰"}
+];
+</script>
+<script>
+/* =========================================================
+   中药二 单味药章节闯关
+   目标：记「药 → 章 › 节」的归属
+   调度：答错/答慢 → 权重升 → 更快再出现；答对且快 → 权重降 → 延后
+   ========================================================= */
+
+/* ---------- 常量 ---------- */
+const LS = 'zy2_section_game_v2';   // v2：加入真题权重，旧进度不兼容
+const OPTS = 5;                 // 选项数（含正确项）
+const MASTER_THRESHOLD = 0.15;  // 权重低于此值视为已掌握
+const MAX_WEIGHT = 8;
+
+/* =========================================================
+   2025 年真题各章分值（单味药，共 51 题）
+   来源：《2026.02.06张钰琪老师VIP《中药二》命题导学》
+   已交叉验证：按章合计 51 = 按题型合计 51，全卷 51+49=100
+   ========================================================= */
+const CHAP_SCORE_2025 = {
+  '第一章 解表药': 3,
+  '第二章 清热药': 6,
+  '第三章 泻下药': 2,
+  '第四章 祛风湿药': 1,
+  '第五章 化湿药': 1,
+  '第六章 利水渗湿药': 4,
+  '第七章 温里药': 1,
+  '第八章 理气药': 3,
+  '第九章 消食药': 2,
+  '第十章 驱虫药': 1,
+  '第十一章 止血药': 4,
+  '第十二章 活血祛瘀药': 4,
+  '第十三章 化痰止咳平喘药': 3,
+  '第十四章 安神药': 2,
+  '第十五章 平肝息风药': 3,
+  '第十六章 开窍药': 1,
+  '第十七章 补虚药': 5,
+  '第十八章 收涩药': 2,
+  '第十九章 涌吐药': 1,
+  '第二十章 杀虫燥湿止痒药': 1,
+  '第二十一章 拔毒化腐生肌药': 1
+};
+
+/* 加权策略：单药出现概率 ∝ 该章「分值密度」= 章分值 ÷ 章药味数
+   例：10 味药考 5 分（密度 0.50）比 20 味药考 1 分（密度 0.05）多 10 倍机会。
+   结果：章层面出题量正好 ∝ 真题分值；单药层面 ∝ 密度。
+   四种模式（界面可切）：
+   · 'density' 纯密度（默认）—— 分值权重最高，完全按 ROI 出题
+   · 'root'    密度开方 —— 缓和版，避免 3 味小章刷屏
+   · 'blend'   分值÷√药味数
+   · 'off'     关闭，均匀出题 */
+const SCORE_FACTOR_MIN = 0.5;
+let weightMode = 'density';    // 默认：纯密度
+const CHAP_DRUG_N = {};        // 章 → 药味数（下面填充）
+
+/* ---------- 派生索引 ---------- */
+const byName = new Map(DRUGS.map(d => [d.n, d]));
+const SECTIONS = [...new Set(DRUGS.map(d => d.s))];          // 44
+const CHAP_OF_SEC = new Map();                               // 节 → 章
+DRUGS.forEach(d => CHAP_OF_SEC.set(d.s, d.c));
+const SEC_DRUGS = new Map();                                 // 节 → 药名数组
+SECTIONS.forEach(s => SEC_DRUGS.set(s, DRUGS.filter(d => d.s === s).map(d => d.n)));
+DRUGS.forEach(d => { CHAP_DRUG_N[d.c] = (CHAP_DRUG_N[d.c] || 0) + 1; });
+
+/* 易混份量：药味越多，作为干扰项越活跃 */
+const SEC_WEIGHT = new Map(SECTIONS.map(s => [s, Math.sqrt(SEC_DRUGS.get(s).length)]));
+
+/* 每味药的真题分值 → 章分值 */
+function scoreOf(drug){
+  const v = CHAP_SCORE_2025[drug.c];
+  return (v === undefined ? 1 : v);
+}
+/* 该药的真题系数 */
+function scoreFactor(drug){
+  if(weightMode === 'off') return 1;
+  const s = scoreOf(drug);
+  const n = CHAP_DRUG_N[drug.c] || 1;
+  const density = s / n;                       // 分值密度：分/味
+  if(weightMode === 'density'){
+    // 纯密度：单药概率 ∝ 分值 ÷ 药味数（每章分值都 ≥1，密度必 >0）
+    return density;
+  }
+  if(weightMode === 'root'){
+    // 密度开方：保留方向，但压缩极差，避免 3 味小章刷屏
+    return Math.sqrt(density);
+  }
+  // blend：按 √药味数 折中
+  return Math.max(0.3, (SCORE_FACTOR_MIN + s) / Math.sqrt(n));
+}
+/* 整章加权后的题量占比，用于界面展示 */
+function chapterShares(){
+  const m = {};
+  DRUGS.forEach(d => { m[d.c] = (m[d.c] || 0) + scoreFactor(d); });
+  const total = Object.values(m).reduce((a,b)=>a+b,0);
+  return Object.entries(m).map(([c,v]) => ({c, pct: v/total}))
+    .sort((a,b)=>b.pct-a.pct);
+}
+
+/* ---------- 存储 ---------- */
+/* 实测：file:// 下 localStorage 可用，但按「浏览器+协议」共享，不按目录隔离；
+   清缓存/换浏览器会丢。故：主存 localStorage，另存一份到会话外的备份 key。 */
+const LS_BAK = LS + '_bak';
+
+function parseState(raw){
+  if(!raw) return null;
+  try{
+    const o = JSON.parse(raw);
+    if(!o || !o.cards) return null;
+    return o;
+  }catch(e){ return null; }
+}
+function load(){
+  // 优先主存，其次备份
+  let o = parseState(localStorage.getItem(LS));
+  if(!o) o = parseState(localStorage.getItem(LS_BAK));
+  return o;
+}
+function save(){
+  try{
+    const s = JSON.stringify(state);
+    localStorage.setItem(LS, s);
+    localStorage.setItem(LS_BAK, s);   // 双写备份
+  }catch(e){}
+}
+/* ---------- 导出 / 导入 ---------- */
+function exportJSON(){
+  const blob = new Blob([JSON.stringify(state,null,0)], {type:'application/json'});
+  const a = document.createElement('a');
+  const d = new Date();
+  const pad = n => String(n).padStart(2,'0');
+  a.href = URL.createObjectURL(blob);
+  a.download = `中药二章节闯关_进度_${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}.json`;
+  a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href), 3000);
+  toast('已导出进度文件');
+}
+function importJSON(file){
+  const r = new FileReader();
+  r.onload = () => {
+    const o = parseState(r.result);
+    if(!o){ toast('文件无法识别'); return; }
+    const merged = Math.max(
+      DRUGS.filter(d=>o.cards[d.n]).length, 0
+    );
+    if(!confirm('导入将覆盖当前进度（当前已练 ' + DRUGS.filter(d=>state.cards[d.n].n>0).length + ' 味，待导入 ' + merged + ' 味）。继续？')) return;
+    state = o;
+    DRUGS.forEach(d => { if(!state.cards[d.n]) state.cards[d.n]={w:2.5,n:0,c:0,t:0,last:0,streak:0}; });
+    save(); render(); toast('进度已导入');
+  };
+  r.readAsText(file);
+}
+function toast(msg){
+  const t = $('#toast');
+  if(!t) return;
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(toast._id);
+  toast._id = setTimeout(()=>t.classList.remove('show'), 1800);
+}
+
+/* ---------- 状态 ---------- */
+let state = load() || {
+  cards: {},        // 药名 → {w:权重, n:答题次数, c:答对次数, t:累计用时ms, last:上次时间戳, streak:连对}
+  total: 0, right: 0, streakBest: 0, streak: 0,
+  startAt: Date.now()
+};
+/* 补齐无记录药的初始权重 */
+DRUGS.forEach(d => { if(!state.cards[d.n]) state.cards[d.n] = {w:2.5,n:0,c:0,t:0,last:0,streak:0}; });
+/* 恢复上次的加权模式 */
+if(state.weightMode && ['density','root','blend','off'].includes(state.weightMode)) weightMode = state.weightMode;
+/* 模式切换后立即持久化（save 定义在前，此处直接写） */
+(function(){ state.weightMode = weightMode; })();
+
+/* ---------- 运行时 ---------- */
+let cur = null;         // {drug, opts:[{text,isRight,sub}], t0}
+let answered = false;
+let timerId = null;
+
+/* ---------- 工具 ---------- */
+const $ = sel => document.querySelector(sel);
+function shuffle(a){ a=a.slice(); for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]];} return a; }
+function pct(n,d){ return d? Math.round(n/d*100) : 0; }
+function fmt(ms){ return (ms/1000).toFixed(1); }
+
+/* ---------- 出题：加权抽取 ---------- */
+function pickDrug(){
+  // 收集还有未掌握项的药
+  const pool = DRUGS.filter(d => state.cards[d.n].w > MASTER_THRESHOLD);
+  const src = pool.length ? pool : DRUGS;
+  let sum = 0;
+  // 最终权重 = 掌握度权重 × 真题分值系数
+  const ws = src.map(d => {
+    const w = Math.max(state.cards[d.n].w, 0.01) * scoreFactor(d);
+    sum += w; return w;
+  });
+  let r = Math.random() * sum;
+  for(let i=0;i<src.length;i++){ r -= ws[i]; if(r <= 0) return src[i]; }
+  return src[src.length-1];
+}
+
+/* ---------- 出题：构造 5 个选项 ---------- */
+function buildOptions(drug){
+  const right = drug.s;
+  const rightChap = drug.c;
+  const set = new Set([right]);
+  const picked = [{text:right, isRight:true, sub:rightChap}];
+
+  // 1) 同章相邻节（最难、最有价值）：取同章其他节，按与正确节在章内顺序的距离排序
+  const sameChap = [...new Set(DRUGS.filter(x=>x.c===rightChap).map(x=>x.s))].filter(s=>s!==right);
+  if(sameChap.length){
+    // 距离：右节在章内的位置
+    const order = [...new Set(DRUGS.filter(x=>x.c===rightChap).map(x=>x.s))];
+    const ri = order.indexOf(right);
+    const sorted = sameChap.slice().sort((a,b)=>Math.abs(order.indexOf(a)-ri)-Math.abs(order.indexOf(b)-ri));
+    // 取最多 3 个（随机从前 4 个里挑，避免千篇一律）
+    const near = sorted.slice(0, Math.min(4, sorted.length));
+    shuffle(near).slice(0, Math.min(3, near.length)).forEach(s=>{
+      if(!set.has(s)){ set.add(s); picked.push({text:s,isRight:false,sub:CHAP_OF_SEC.get(s)}); }
+    });
+  }
+
+  // 2) 不够则加入其他章的高频节（按药味数加权）
+  if(picked.length < OPTS){
+    const others = SECTIONS.filter(s => !set.has(s) && CHAP_OF_SEC.get(s) !== rightChap);
+    const weighted = others.map(s=>[s, SEC_WEIGHT.get(s)]);
+    while(picked.length < OPTS && weighted.length){
+      let sum = weighted.reduce((a,b)=>a+b[1],0), r = Math.random()*sum, k=0;
+      for(;k<weighted.length;k++){ r -= weighted[k][1]; if(r<=0) break; }
+      k = Math.min(k, weighted.length-1);
+      const s = weighted[k][0];
+      weighted.splice(k,1);
+      if(!set.has(s)){ set.add(s); picked.push({text:s,isRight:false,sub:CHAP_OF_SEC.get(s)}); }
+    }
+  }
+  // 3) 兜底
+  const remain = SECTIONS.filter(s=>!set.has(s));
+  while(picked.length < OPTS && remain.length){
+    const s = remain.splice(Math.random()*remain.length|0,1)[0];
+    set.add(s); picked.push({text:s,isRight:false,sub:CHAP_OF_SEC.get(s)});
+  }
+  return shuffle(picked);
+}
+
+/* ---------- 渲染 ---------- */
+function render(){
+  const c = state.cards;
+  const done = DRUGS.filter(d=>c[d.n].n>0).length;
+  const mastered = DRUGS.filter(d=>c[d.n].n>0 && c[d.n].w<=MASTER_THRESHOLD).length;
+  const weak = DRUGS.filter(d=>c[d.n].n>0 && c[d.n].w>1.5).length;
+
+  $('#app').innerHTML = `
+    <div class="topbar">
+      <div class="title">中药二 · 单味药章节闯关
+        <small>407 味 · 44 个章节 · 连对 ${state.streak} · 最高 ${state.streakBest}</small>
+      </div>
+      <button class="btn ${weightMode!=='off'?'on':'ghost'}" id="btnWeight" title="点击切换加权模式：纯密度 → 密度开方 → 折中 → 关闭">
+        ${({off:'加权关闭',density:'分值密度',root:'密度开方',blend:'折中'})[weightMode]}
+      </button>
+      <button class="btn ghost" id="btnReset">重来</button>
+    </div>
+
+    <div class="stats">
+      <div class="stat a"><b>${mastered}</b><span>已掌握</span></div>
+      <div class="stat b"><b>${weak}</b><span>待加强</span></div>
+      <div class="stat"><b>${done}<i style="font-size:11px;color:#8b9bb8">/407</i></b><span>已练过</span></div>
+      <div class="stat c"><b>${pct(state.right,state.total)}%</b><span>正确率</span></div>
+    </div>
+    <div class="bar"><i style="width:${pct(mastered,DRUGS.length)}%"></i></div>
+
+    <div class="card" id="card"></div>
+
+    ${weightMode!=='off' ? `<details class="sc"><summary>命题权重（按「每味药分值密度」排序）</summary>
+      <div class="scin">${chapterShares().map(x=>{
+        const s = CHAP_SCORE_2025[x.c];
+        const n = CHAP_DRUG_N[x.c] || 1;
+        const dens = (s/n);
+        const w = Math.max(2, Math.round(x.pct*100*1.6));
+        return `<div class="scrow">
+          <span class="scn">${x.c.replace(/^第.+?章\s*/,'')}</span>
+          <span class="scb"><i style="width:${w}%"></i></span>
+          <span class="scv">${s}分/${n}味 ${dens.toFixed(2)}</span>
+        </div>`;
+      }).join('')}</div>
+      <div class="scnote">${({
+        density:'分值密度模式（默认）：单药概率 ∝ 分值 ÷ 药味数。例：10味考5分(0.50) 比 20味考1分(0.05) 多出 10 倍。',
+        root:'密度开方：保留「分值密度」方向，但压缩极差，避免 3 味小章刷屏。',
+        blend:'折中模式：单药概率 ∝ 分值 ÷ √药味数，最平缓。'
+      })[weightMode]}</div>
+    </details>` : ''}
+
+    <div class="io">
+      <button class="btn" id="btnExport">⬇ 导出进度</button>
+      <button class="btn" id="btnImport">⬆ 导入进度</button>
+      <input type="file" id="fileImport" accept=".json,application/json" style="display:none">
+    </div>
+    <div class="savehint">进度自动保存在本浏览器，关掉网页不会丢<br>但清理浏览器数据 / 换浏览器会丢 —— 重要进度请点「导出」备份</div>
+
+    <footer>
+      键盘：<span class="kbd">1</span>–<span class="kbd">5</span> 选答案　<span class="kbd">Enter</span> 下一题<br>
+      答错或答慢会加快重考，答对且快会延后
+    </footer>
+  `;
+  $('#btnWeight').onclick = () => {
+    const order = ['density','root','blend','off'];
+    weightMode = order[(order.indexOf(weightMode)+1) % order.length];
+    state.weightMode = weightMode;
+    save(); render(); nextQuestion();
+  };
+  $('#btnExport').onclick = exportJSON;
+  $('#btnImport').onclick = () => $('#fileImport').click();
+  $('#fileImport').onchange = e => {
+    const f = e.target.files[0];
+    if(f) importJSON(f);
+    e.target.value = '';
+  };
+  $('#btnReset').onclick = () => {
+    if(confirm('清空全部进度，重新开始？')){
+      localStorage.removeItem(LS);
+      state = {cards:{}, total:0, right:0, streakBest:0, streak:0, startAt:Date.now()};
+      DRUGS.forEach(d => state.cards[d.n]={w:2.5,n:0,c:0,t:0,last:0,streak:0});
+      save(); render(); nextQuestion();
+    }
+  };
+  nextQuestion();
+}
+
+/* ---------- 出下一题 ---------- */
+function nextQuestion(){
+  answered = false;
+  const drug = pickDrug();
+  const opts = buildOptions(drug);
+  cur = {drug, opts, t0: performance.now()};
+
+  const card = $('#card');
+  const isLong = drug.n.length >= 4;
+  card.innerHTML = `
+    <div class="qmeta">
+      <span>第 ${state.total+1} 题</span>
+      <span class="tm" id="tm">0.0s</span>
+    </div>
+    <div class="drug ${isLong?'long':''}">${drug.n}</div>
+    <div class="ask">属于下列哪一类？</div>
+    <div class="opts" id="opts">
+      ${opts.map((o,i)=>`
+        <button class="opt" data-i="${i}">
+          <span class="k">${i+1}</span>
+          <span class="t">${o.text}</span>
+        </button>`).join('')}
+    </div>
+    <div class="fb" id="fb"></div>
+    <button class="next" id="next">下一题 →</button>
+  `;
+  card.querySelectorAll('.opt').forEach(b=>{
+    b.onclick = () => answer(parseInt(b.dataset.i,10));
+  });
+  $('#next').onclick = nextQuestion;
+
+  // 计时
+  clearInterval(timerId);
+  timerId = setInterval(()=>{
+    const el = $('#tm');
+    if(el && !answered) el.textContent = fmt(performance.now()-cur.t0)+'s';
+  }, 100);
+}
+
+/* ---------- 判题 ---------- */
+function answer(idx){
+  if(answered) return;
+  answered = true;
+  clearInterval(timerId);
+
+  const elapsed = performance.now() - cur.t0;
+  const sec = elapsed/1000;
+  const opts = cur.opts;
+  const chosen = opts[idx];
+  const isRight = chosen.isRight;
+  const card = state.cards[cur.drug.n];
+
+  /* —— 权重更新（灵敏版）——
+     答对：按速度分三档，快答骤降、慢答轻降
+     答错：一律重罚，且越是"已接近掌握"的药，罚得越狠（防止侥幸蒙对后被埋没） */
+  let delta, speedTag;
+  if(isRight){
+    if(sec <= 2.0)      { delta = -1.10; speedTag = '快'; }   // 秒答，基本已掌握
+    else if(sec <= 4.5) { delta = -0.62; speedTag = '稳'; }   // 正常思考
+    else                { delta = -0.28; speedTag = '慢'; }   // 磨出来的，降得少
+    // 连对加速遗忘：连续答对让权重更快见底
+    delta -= Math.min(card.streak, 4) * 0.16;
+    card.streak++;
+  }else{
+    delta = 2.6 + (card.w <= 0.8 ? 1.2 : 0);   // 已近乎掌握却答错 → +3.8
+    card.streak = 0;
+  }
+  card.w = Math.min(MAX_WEIGHT, Math.max(0.05, card.w + delta));
+  card.n++; card.t += elapsed; card.last = Date.now();
+  if(isRight) card.c++;
+
+  state.total++; if(isRight){ state.right++; state.streak++; state.streakBest=Math.max(state.streakBest,state.streak);} else state.streak=0;
+  save();
+
+  /* —— 视觉反馈 —— */
+  const btns = document.querySelectorAll('.opt');
+  btns.forEach((b,i)=>{
+    b.classList.add('lock');
+    if(opts[i].isRight) b.classList.add('ok');
+    else if(i===idx) b.classList.add('bad');
+    else b.classList.add('dim');
+  });
+
+  // 灵敏度：连击特效 + 状态提示
+  const masteredNow = card.w <= MASTER_THRESHOLD;
+  const dispW = card.w <= MASTER_THRESHOLD ? '已掌握' :
+                card.w <= 1.2 ? '快记住了' :
+                card.w <= 2.5 ? '还要练' : '重点复习';
+
+  const fb = $('#fb');
+  fb.className = 'fb show';
+  fb.innerHTML = `
+    <div class="h ${isRight?'ok':'bad'}">
+      ${isRight? '✓ 正确' : '✗ 答案：' + cur.drug.s}
+      <span style="font-weight:400;color:#8b9bb8;font-size:12px">${sec.toFixed(1)}s · ${isRight?speedTag+'答':'错'}</span>
+      ${state.streak>=3 && isRight ? `<span class="combo">连对 ${state.streak}</span>` : ''}
+    </div>
+    <div class="row">归属：<b>${cur.drug.c} › ${cur.drug.s}</b></div>
+    ${!isRight ? `<div class="row">你选的「${chosen.text}」属于 <b>${chosen.sub}</b></div>` : ''}
+    ${cur.drug.e ? `<div class="eff"><i>功效</i><br>${cur.drug.e}</div>` : ''}
+    <div class="wbar">
+      <span class="wtag">掌握度</span>
+      <span class="wtrack"><i class="${masteredNow?'hi':''}" style="width:${Math.round((1-card.w/MAX_WEIGHT)*100)}%"></i></span>
+      <span class="wlab ${masteredNow?'hi':''}">${dispW}</span>
+    </div>
+  `;
+
+  const nextBtn = $('#next');
+  nextBtn.classList.add('show');
+  nextBtn.focus();
+
+  // 更新顶栏统计（不整页重绘，保留当前题）
+  updateStats();
+}
+
+function updateStats(){
+  const c = state.cards;
+  const done = DRUGS.filter(d=>c[d.n].n>0).length;
+  const mastered = DRUGS.filter(d=>c[d.n].n>0 && c[d.n].w<=MASTER_THRESHOLD).length;
+  const weak = DRUGS.filter(d=>c[d.n].n>0 && c[d.n].w>1.5).length;
+  const st = document.querySelectorAll('.stat b');
+  if(st.length===4){
+    st[0].textContent = mastered;
+    st[1].textContent = weak;
+    st[2].innerHTML = done + '<i style="font-size:11px;color:#8b9bb8">/407</i>';
+    st[3].textContent = pct(state.right,state.total)+'%';
+  }
+  const bar = document.querySelector('.bar>i');
+  if(bar) bar.style.width = pct(mastered,DRUGS.length)+'%';
+  const t = document.querySelector('.title small');
+  if(t) t.textContent = `407 味 · 44 个章节 · 连对 ${state.streak} · 最高 ${state.streakBest}`;
+}
+
+/* ---------- 键盘 ---------- */
+document.addEventListener('keydown', e=>{
+  if(e.key>='1' && e.key<='5'){
+    const i = parseInt(e.key,10)-1;
+    const b = document.querySelectorAll('.opt')[i];
+    if(b && !answered) b.click();
+  }else if(e.key==='Enter'){
+    const n = $('#next');
+    if(n && n.classList.contains('show')) n.click();
+  }
+});
+
+/* ---------- 启动 ---------- */
+render();
+</script>
+</body>
+</html>
