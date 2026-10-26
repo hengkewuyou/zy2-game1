@@ -168,7 +168,29 @@
   .io{display:flex;gap:8px;margin-top:14px}
   .io .btn{flex:1 1 0;min-width:0;font-size:12.5px;padding:9px 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
+  /* ---------- 云同步面板 ---------- */
   /* ---------- 命题权重面板 ---------- */
+  .syncbox{margin-top:14px}
+  .sbadge{
+    display:inline-block;padding:1px 8px;border-radius:99px;font-size:11px;
+    background:#2c3855;color:#a9bade;font-weight:600;
+  }
+  .sbadge.on{background:rgba(47,211,160,.18);color:var(--ok)}
+  .sbadge.err{background:rgba(255,93,108,.18);color:var(--bad)}
+  .sbadge.syncing{background:rgba(255,182,72,.18);color:var(--warn)}
+  .sf{margin-bottom:9px}
+  .sf label{display:block;font-size:10.5px;color:var(--dim);margin-bottom:3px}
+  .sf input{
+    width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--line);
+    background:#131a29;color:var(--txt);font-size:12.5px;font-family:inherit;
+  }
+  .sf input:focus{outline:none;border-color:var(--acc)}
+  .sf .hint{font-size:10px;color:#556181;margin-top:3px;line-height:1.5}
+  .sbtns{display:flex;gap:7px;margin-top:10px}
+  .sbtns .btn{flex:1;font-size:12px;padding:8px 4px}
+  .smsg{font-size:11px;margin-top:9px;line-height:1.6;color:var(--dim)}
+  .smsg.ok{color:var(--ok)}
+  .smsg.err{color:var(--bad)}
   .sc{margin-top:14px;background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden}
   .sc>summary{
     cursor:pointer;padding:11px 14px;font-size:12.5px;color:var(--dim);list-style:none;
@@ -664,6 +686,193 @@ const SCORE_FACTOR_MIN = 0.5;
 let weightMode = 'density';    // 默认：纯密度
 const CHAP_DRUG_N = {};        // 章 → 药味数（下面填充）
 
+/* =========================================================
+   GitHub 仓库云同步
+   =========================================================
+   原理：进度存成仓库里的 progress.json 文件
+        · 读：GET raw.githubusercontent.com（无需 token，CDN 快）
+        · 写：PUT api.github.com/contents（需要 token）
+
+   安全说明（务必知悉）：
+   · token 会出现在网页源码里，任何能打开页面的人都能看到
+   · 因此必须用「只读/只写这一个仓库这一个路径」的细粒度 token
+   · 建议 token 设 7 天过期，随时可删
+
+   同步时机：
+   · 打开页面 → 拉取合并
+   · 每题答完 → 本地存 → 异步上传（节流 3 秒，GitHub 接口限流）
+   · 切回页面 → 再拉一次
+   ========================================================= */
+const SYNC = (() => {
+  const CFG_KEY = 'zy2_gh_cfg';
+  let cfg = null;
+  let lastPush = 0;
+  let pushing = false;
+  let pending = null;
+  let status = 'off';      // off | ok | syncing | error | noconf
+  let lastErr = '';
+
+  const loadCfg = () => {
+    try { cfg = JSON.parse(localStorage.getItem(CFG_KEY) || 'null'); } catch (e) { cfg = null; }
+    return cfg;
+  };
+  const saveCfg = c => { cfg = c; localStorage.setItem(CFG_KEY, JSON.stringify(c)); };
+  const clearCfg = () => { localStorage.removeItem(CFG_KEY); cfg = null; status = 'off'; };
+
+  function deviceId() {
+    let id = localStorage.getItem('zy2_device_id');
+    if (!id) { id = 'dev_' + Math.random().toString(36).slice(2, 8); localStorage.setItem('zy2_device_id', id); }
+    return id;
+  }
+
+  /* ---------- 合并：每味药取「更差」 ---------- */
+  function mergeCards(local, remote) {
+    const out = {};
+    const names = new Set([...Object.keys(local || {}), ...Object.keys(remote || {})]);
+    names.forEach(n => {
+      const a = local && local[n], b = remote && remote[n];
+      if (!a) { out[n] = b; return; }
+      if (!b) { out[n] = a; return; }
+      out[n] = {
+        w: Math.max(a.w || 0, b.w || 0),
+        n: Math.max(a.n || 0, b.n || 0),
+        c: Math.max(a.c || 0, b.c || 0),
+        t: Math.max(a.t || 0, b.t || 0),
+        last: Math.max(a.last || 0, b.last || 0),
+        streak: Math.max(a.streak || 0, b.streak || 0)
+      };
+    });
+    return out;
+  }
+
+  /* ---------- 读取（走 raw，无需 token，且不受 API 限流） ---------- */
+  async function pull() {
+    if (!cfg) return null;
+    const url = `https://raw.githubusercontent.com/${cfg.owner}/${cfg.repo}/${cfg.branch}/${cfg.path}?t=${Date.now()}`;
+    try {
+      const r = await fetch(url, { cache: 'no-store' });
+      if (!r.ok) {
+        if (r.status === 404) return null;   // 文件还不存在，正常
+        throw new Error('HTTP ' + r.status);
+      }
+      return await r.json();
+    } catch (e) {
+      lastErr = e.message || String(e);
+      return null;
+    }
+  }
+
+  /* ---------- 写入 ---------- */
+  async function doPush(state) {
+    if (!cfg) return false;
+    const api = `https://api.github.com/repos/${cfg.owner}/${cfg.repo}/contents/${cfg.path}`;
+    const headers = {
+      'Authorization': 'Bearer ' + cfg.token,
+      'Accept': 'application/vnd.github+json',
+      'X-GitHub-Api-Version': '2022-11-28',
+      'Content-Type': 'application/json'
+    };
+    try {
+      // 1) 取当前 sha（更新必须带 sha）
+      let sha = null;
+      const gr = await fetch(api + '?ref=' + encodeURIComponent(cfg.branch), {
+        headers, cache: 'no-store'
+      });
+      if (gr.ok) {
+        const j = await gr.json();
+        sha = j.sha;
+      } else if (gr.status !== 404) {
+        throw new Error('读取失败 HTTP ' + gr.status);
+      }
+
+      // 2) 提交
+      const payload = {
+        message: `progress: ${state.total || 0} 题 @${deviceId()}`,
+        content: btoa(unescape(encodeURIComponent(JSON.stringify({
+          cards: state.cards,
+          total: state.total || 0,
+          right: state.right || 0,
+          streak: state.streak || 0,
+          streakBest: state.streakBest || 0,
+          device: deviceId(),
+          updatedAt: new Date().toISOString()
+        })))),
+        branch: cfg.branch
+      };
+      if (sha) payload.sha = sha;
+
+      const pr = await fetch(api, { method: 'PUT', headers, body: JSON.stringify(payload) });
+      if (!pr.ok) {
+        const t = await pr.text();
+        throw new Error('写入失败 HTTP ' + pr.status + ' ' + t.slice(0, 80));
+      }
+      status = 'ok'; lastErr = '';
+      return true;
+    } catch (e) {
+      status = 'error';
+      lastErr = e.message || String(e);
+      console.warn('[sync]', lastErr);
+      return false;
+    }
+  }
+
+  /* ---------- 对外：批量节流推送 ----------
+     每题都 commit 会把仓库历史刷爆（GitHub 每次 PUT 必产生 commit）。
+     故改为：累计 5 题 或 间隔 30 秒 上传一次；
+     页面关闭/切后台时用 sendBeacon 强制补传一次。 */
+  let sinceLastPush = 0;      // 自上次成功上传后答了几题
+  let lastPushAt = 0;
+
+  async function push(state, force) {
+    if (!cfg) return false;
+    if (pushing && !force) { pending = state; return false; }
+    pushing = true; status = 'syncing';
+    const ok = await doPush(state);
+    pushing = false;
+    if (ok) { sinceLastPush = 0; lastPushAt = Date.now(); }
+    if (pending) { const s = pending; pending = null; setTimeout(() => push(s, true), 400); }
+    return ok;
+  }
+
+  /* 每题调用：满足条件才真正上传 */
+  function tick(state) {
+    if (!cfg) return;
+    sinceLastPush++;
+    const byCount = sinceLastPush >= 5;
+    const byTime = Date.now() - lastPushAt >= 30000;
+    if (byCount || byTime) push(state);
+  }
+
+  /* 紧急补传（页面关闭/切后台） */
+  function flush(state) {
+    if (!cfg) return;
+    push(state, true);
+  }
+
+  return {
+    get configured() { return !!(cfg && cfg.owner && cfg.repo && cfg.token); },
+    get status() { return status; },
+    get error() { return lastErr; },
+    get cfg() { return cfg; },
+    loadCfg, saveCfg, clearCfg, mergeCards, pull, push, tick, flush, deviceId,
+
+    /* 配置校验：读一下仓库确认 token 有效 */
+    async verify(c) {
+      const r = await fetch(`https://api.github.com/repos/${c.owner}/${c.repo}`, {
+        headers: {
+          'Authorization': 'Bearer ' + c.token,
+          'Accept': 'application/vnd.github+json',
+          'X-GitHub-Api-Version': '2022-11-28'
+        }
+      });
+      if (!r.ok) throw new Error('仓库无法访问 HTTP ' + r.status + '（检查用户名/仓库名/token 权限）');
+      const j = await r.json();
+      if (!j.permissions || !j.permissions.push) throw new Error('token 没有写入权限');
+      return j;
+    }
+  };
+})();
+
 /* ---------- 派生索引 ---------- */
 const byName = new Map(DRUGS.map(d => [d.n, d]));
 const SECTIONS = [...new Set(DRUGS.map(d => d.s))];          // 44
@@ -905,6 +1114,11 @@ function render(){
     </div>
     <div class="savehint">进度自动保存在本浏览器，关掉网页不会丢<br>但清理浏览器数据 / 换浏览器会丢 —— 重要进度请点「导出」备份</div>
 
+    <details class="sc syncbox" id="syncBox">
+      <summary><span id="syncBadge" class="sbadge">云同步</span></summary>
+      <div class="scin" id="syncPanel"></div>
+    </details>
+
     <footer>
       键盘：<span class="kbd">1</span>–<span class="kbd">5</span> 选答案　<span class="kbd">Enter</span> 下一题<br>
       答错或答慢会加快重考，答对且快会延后
@@ -916,6 +1130,7 @@ function render(){
     state.weightMode = weightMode;
     save(); render(); nextQuestion();
   };
+  renderSyncPanel();
   $('#btnExport').onclick = exportJSON;
   $('#btnImport').onclick = () => $('#fileImport').click();
   $('#fileImport').onchange = e => {
@@ -1007,6 +1222,8 @@ function answer(idx){
 
   state.total++; if(isRight){ state.right++; state.streak++; state.streakBest=Math.max(state.streakBest,state.streak);} else state.streak=0;
   save();
+  // 每题自动上传：累计 5 题或 30 秒才真正 commit，避免刷爆仓库历史
+  if(SYNC.configured){ SYNC.tick(state); }
 
   /* —— 视觉反馈 —— */
   const btns = document.querySelectorAll('.opt');
@@ -1079,8 +1296,155 @@ document.addEventListener('keydown', e=>{
   }
 });
 
+/* ---------- 云同步面板 ---------- */
+function updateSyncBadge(){
+  const b = $('#syncBadge');
+  if(!b) return;
+  const on = SYNC.configured;
+  const st = SYNC.status;
+  b.className = 'sbadge';
+  if(!on){ b.textContent = '云同步 · 未开启'; return; }
+  if(st === 'syncing'){ b.classList.add('syncing'); b.textContent = '云同步 · 上传中…'; }
+  else if(st === 'error'){ b.classList.add('err'); b.textContent = '云同步 · 出错'; }
+  else { b.classList.add('on'); b.textContent = '云同步 · 已连'; }
+}
+
+function renderSyncPanel(){
+  const p = $('#syncPanel');
+  if(!p) return;
+  const c = SYNC.cfg || {};
+  const on = SYNC.configured;
+
+  if(on){
+    p.innerHTML = `
+      <div class="smsg ok">已连接：<b>${c.owner}/${c.repo}</b><br>每题自动上传，打开页面自动合并</div>
+      <div class="sbtns">
+        <button class="btn" id="syncNow">立即同步</button>
+        <button class="btn" id="syncPull">从云端拉取</button>
+        <button class="btn ghost" id="syncOff">断开</button>
+      </div>
+      <div class="smsg" id="syncMsg"></div>
+    `;
+    $('#syncNow').onclick = async () => {
+      const m = $('#syncMsg'); m.className='smsg'; m.textContent = '上传中…';
+      const ok = await SYNC.push(state, true);
+      m.className = 'smsg ' + (ok ? 'ok' : 'err');
+      m.textContent = ok ? '✅ 已上传到云端' : ('❌ ' + SYNC.error);
+      updateSyncBadge();
+    };
+    $('#syncPull').onclick = async () => {
+      const m = $('#syncMsg'); m.className='smsg'; m.textContent = '拉取中…';
+      const remote = await SYNC.pull();
+      if(!remote){ m.className='smsg err'; m.textContent = '云端暂无数据'; return; }
+      state.cards = SYNC.mergeCards(state.cards, remote.cards || {});
+      DRUGS.forEach(d => { if(!state.cards[d.n]) state.cards[d.n]={w:2.5,n:0,c:0,t:0,last:0,streak:0}; });
+      state.total = Math.max(state.total||0, remote.total||0);
+      state.right = Math.max(state.right||0, remote.right||0);
+      state.streakBest = Math.max(state.streakBest||0, remote.streakBest||0);
+      save();
+      m.className='smsg ok'; m.textContent = '✅ 已合并云端进度';
+      await SYNC.push(state, true);
+      render();
+    };
+    $('#syncOff').onclick = () => {
+      if(confirm('断开云同步？本地进度保留。')){ SYNC.clearCfg(); render(); }
+    };
+  } else {
+    p.innerHTML = `
+      <div class="sf"><label>仓库所有者</label>
+        <input id="ghOwner" placeholder="例如 hengkewuyou" value="${c.owner||''}"></div>
+      <div class="sf"><label>仓库名</label>
+        <input id="ghRepo" placeholder="例如 zy2-game1" value="${c.repo||''}"></div>
+      <div class="sf"><label>Token（细粒度，仅此仓库 Contents 读写）</label>
+        <input id="ghToken" type="password" placeholder="github_pat_..." value="${c.token||''}"></div>
+      <div class="sf"><label>文件路径</label>
+        <input id="ghPath" value="${c.path||'progress.json'}"></div>
+      <div class="sbtns"><button class="btn" id="syncConnect">连接并同步</button></div>
+      <div class="smsg" id="syncMsg"></div>
+      <div class="hint" style="font-size:10px;color:#556181;margin-top:8px;line-height:1.6">
+        ⚠️ Token 会保存在本浏览器并用于上传进度。请只授予「本仓库 · Contents 读写」，并设置较短有效期。
+      </div>
+    `;
+    $('#syncConnect').onclick = async () => {
+      const m = $('#syncMsg');
+      const cfg = {
+        owner: $('#ghOwner').value.trim(),
+        repo: $('#ghRepo').value.trim(),
+        token: $('#ghToken').value.trim(),
+        branch: 'main',
+        path: $('#ghPath').value.trim() || 'progress.json'
+      };
+      if(!cfg.owner || !cfg.repo || !cfg.token){ m.className='smsg err'; m.textContent='三项都要填'; return; }
+      m.className='smsg'; m.textContent = '验证中…';
+      try{
+        await SYNC.verify(cfg);
+        SYNC.saveCfg(cfg);
+        m.className='smsg ok'; m.textContent='✅ 连接成功，正在合并云端进度…';
+        const remote = await SYNC.pull();
+        if(remote && remote.cards){
+          state.cards = SYNC.mergeCards(state.cards, remote.cards);
+          DRUGS.forEach(d => { if(!state.cards[d.n]) state.cards[d.n]={w:2.5,n:0,c:0,t:0,last:0,streak:0}; });
+          state.total = Math.max(state.total||0, remote.total||0);
+          state.right = Math.max(state.right||0, remote.right||0);
+        }
+        save();
+        await SYNC.push(state, true);
+        setTimeout(()=>render(), 400);
+      }catch(e){
+        m.className='smsg err'; m.textContent = '❌ ' + (e.message||e);
+      }
+    };
+  }
+  updateSyncBadge();
+}
+
 /* ---------- 启动 ---------- */
 render();
+
+/* 启动时若已配置云同步：拉取 → 合并 → 回推 */
+(async function bootSync(){
+  SYNC.loadCfg();
+  if(!SYNC.configured) { updateSyncBadge(); return; }
+  try{
+    const remote = await SYNC.pull();
+    if(remote && remote.cards){
+      const before = JSON.stringify(state.cards);
+      state.cards = SYNC.mergeCards(state.cards, remote.cards);
+      DRUGS.forEach(d => { if(!state.cards[d.n]) state.cards[d.n]={w:2.5,n:0,c:0,t:0,last:0,streak:0}; });
+      state.total = Math.max(state.total||0, remote.total||0);
+      state.right = Math.max(state.right||0, remote.right||0);
+      state.streakBest = Math.max(state.streakBest||0, remote.streakBest||0);
+      if(JSON.stringify(state.cards) !== before){
+        save();
+        render();          // 有新数据，刷新统计
+      }
+    }
+  }catch(e){ /* 静默失败，不打断答题 */ }
+  updateSyncBadge();
+})();
+
+/* 切回页面时再拉一次（比如从手机切到电脑） */
+document.addEventListener('visibilitychange', async () => {
+  if(!SYNC.configured) return;
+  if(document.visibilityState === 'hidden'){
+    SYNC.flush(state);        // 切后台：先把未传的推上去
+    return;
+  }
+  try{
+    const remote = await SYNC.pull();
+    if(!remote || !remote.cards) return;
+    const before = JSON.stringify(state.cards);
+    state.cards = SYNC.mergeCards(state.cards, remote.cards);
+    DRUGS.forEach(d => { if(!state.cards[d.n]) state.cards[d.n]={w:2.5,n:0,c:0,t:0,last:0,streak:0}; });
+    state.total = Math.max(state.total||0, remote.total||0);
+    state.right = Math.max(state.right||0, remote.right||0);
+    if(JSON.stringify(state.cards) !== before){ save(); render(); }
+  }catch(e){}
+});
+
+/* 关闭页面：最后补传一次 */
+window.addEventListener('pagehide', () => { if(SYNC.configured) SYNC.flush(state); });
+window.addEventListener('beforeunload', () => { if(SYNC.configured) SYNC.flush(state); });
 </script>
 </body>
 </html>
