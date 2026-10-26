@@ -745,17 +745,30 @@ const SYNC = (() => {
     return out;
   }
 
-  /* ---------- 读取（走 raw，无需 token，且不受 API 限流） ---------- */
+  /* ---------- 读取 ----------
+     重要：不要用 raw.githubusercontent.com —— 它走 CDN，提交后要等几十秒才更新，
+     会导致「另一台设备拉不到最新进度」。改用 Contents API（实时），
+     并带上时间戳与 no-store 双保险。 */
   async function pull() {
     if (!cfg) return null;
-    const url = `https://raw.githubusercontent.com/${cfg.owner}/${cfg.repo}/${cfg.branch}/${cfg.path}?t=${Date.now()}`;
+    const api = `https://api.github.com/repos/${cfg.owner}/${cfg.repo}/contents/${cfg.path}`;
+    const headers = {
+      'Accept': 'application/vnd.github+json',
+      'X-GitHub-Api-Version': '2022-11-28'
+    };
+    // 有 token 就用（限流额度高）；没有也能读公开仓库
+    if (cfg.token) headers['Authorization'] = 'Bearer ' + cfg.token;
     try {
-      const r = await fetch(url, { cache: 'no-store' });
-      if (!r.ok) {
-        if (r.status === 404) return null;   // 文件还不存在，正常
-        throw new Error('HTTP ' + r.status);
-      }
-      return await r.json();
+      const r = await fetch(api + '?ref=' + encodeURIComponent(cfg.branch) + '&t=' + Date.now(), {
+        headers, cache: 'no-store'
+      });
+      if (r.status === 404) return null;      // 文件还不存在
+      if (!r.ok) throw new Error('读取失败 HTTP ' + r.status);
+      const j = await r.json();
+      // content 是 base64，且可能带换行
+      const b64 = (j.content || '').replace(/\s/g, '');
+      const json = decodeURIComponent(escape(atob(b64)));
+      return JSON.parse(json);
     } catch (e) {
       lastErr = e.message || String(e);
       return null;
